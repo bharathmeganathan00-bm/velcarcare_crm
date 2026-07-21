@@ -15,7 +15,7 @@ export function AppLayout() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopHeader onMobileMenu={() => setDrawerOpen(true)} />
-        <main className="flex-1 overflow-y-auto px-4 pb-24 pt-5 lg:px-6 lg:pb-8">
+        <main className="flex-1 overflow-y-auto px-3 pb-24 pt-4 sm:px-4 sm:pt-5 lg:px-6 lg:pb-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>

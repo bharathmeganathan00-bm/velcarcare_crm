@@ -74,10 +74,10 @@ export function SectionTitle({
   action?: React.ReactNode
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-2xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-2 sm:gap-3">
+      <div className="min-w-0">
+        <h1 className="truncate text-lg font-extrabold tracking-tight text-brand-charcoal sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-0.5 truncate text-xs text-slate-500 sm:text-sm">{subtitle}</p>}
       </div>
       {action}
     </div>

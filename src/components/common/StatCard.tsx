@@ -38,7 +38,7 @@ export function StatCard({
           <Icon className="h-[18px] w-[18px]" />
         </span>
       </div>
-      <p className="mt-2 text-2xl font-extrabold tracking-tight text-brand-charcoal">{value}</p>
+      <p className="mt-2 text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-2xl">{value}</p>
       <div className="mt-1 flex items-center gap-1.5">
         {delta !== undefined && (
           <span
