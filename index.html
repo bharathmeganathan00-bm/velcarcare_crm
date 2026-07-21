@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#1E2530" />
+    <meta name="description" content="VELCARCARE - Multi Brand Car Service Centre CRM" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- CarImagesAPI — car model images (client-side loader, cars only). -->
+    <script>
+      window.CI_DEFAULT_TYPE = 'car';
+      (function (c, a, r, i) {
+        c.CI_API_KEY = i;
+        var script = a.createElement('script');
+        script.async = true;
+        script.src = r + '?v=' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        a.head.appendChild(script);
+      })(window, document, 'https://carimagesapi.com/assets/js/carimages.js', 'ci_f5701f3c7e492238f8869149e24307ae052b364e2c44df90066766cb');
+    </script>
+
+    <title>VELCARCARE CRM</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

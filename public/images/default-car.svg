@@ -1,0 +1,11 @@
+<svg width="240" height="150" viewBox="0 0 240 150" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Car">
+  <rect width="240" height="150" fill="#F8FAFC"/>
+  <path d="M40 96l10-30a14 14 0 0113-9h74a14 14 0 0112 7l16 30" fill="none" stroke="#CBD5E1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 96h184a6 6 0 016 6v20a6 6 0 01-6 6h-12a10 10 0 01-20 0H80a10 10 0 01-20 0H34a6 6 0 01-6-6v-20a6 6 0 016-6z" fill="#E2E8F0"/>
+  <circle cx="70" cy="126" r="11" fill="#94A3B8"/>
+  <circle cx="70" cy="126" r="4" fill="#F8FAFC"/>
+  <circle cx="182" cy="126" r="11" fill="#94A3B8"/>
+  <circle cx="182" cy="126" r="4" fill="#F8FAFC"/>
+  <path d="M60 92l8-20a8 8 0 017.5-5h29v25H60z" fill="#F1F5F9"/>
+  <path d="M116 67h20a8 8 0 017 4l11 21h-38V67z" fill="#F1F5F9"/>
+</svg>
