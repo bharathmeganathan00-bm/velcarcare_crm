@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, Menu, Phone, Search, Settings, User } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, Phone, Search, Settings, User } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/ui/Misc'
 import { Logo } from '@/components/ui/Logo'
 import { COMPANY } from '@/data/mockData'
 import { GlobalSearch } from '@/components/common/GlobalSearch'
+import { Notifications } from '@/components/layout/Notifications'
 
 export function TopHeader({ onMobileMenu }: { onMobileMenu: () => void }) {
   const { user, logout } = useAuth()
@@ -48,12 +49,7 @@ export function TopHeader({ onMobileMenu }: { onMobileMenu: () => void }) {
           {COMPANY.phones[0]}
         </a>
 
-        <button className="relative rounded-lg p-2 text-slate-600 hover:bg-surface-muted">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold text-white">
-            5
-          </span>
-        </button>
+        <Notifications />
 
         <div className="relative">
           <button

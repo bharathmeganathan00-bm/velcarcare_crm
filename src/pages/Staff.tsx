@@ -137,8 +137,8 @@ export function Staff() {
 
       {/* Permission matrix dialog */}
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={`Permissions · ${editing?.name}`} size="lg">
-        <div className="max-h-[60vh] overflow-y-auto p-4">
-          <table className="w-full text-sm">
+        <div className="max-h-[60vh] overflow-auto p-4">
+          <table className="w-full min-w-[440px] text-sm">
             <thead className="sticky top-0 bg-white">
               <tr className="text-xs font-bold uppercase text-slate-400">
                 <th className="py-2 text-left">Module</th>

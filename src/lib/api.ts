@@ -233,7 +233,7 @@ function mapJobCard(r: any): JobCard {
 // ---------------------------------------------------------------------------
 // Invoices
 // ---------------------------------------------------------------------------
-const INV_SELECT = '*, customers(name), vehicles(reg_number, brand, model, year)'
+const INV_SELECT = '*, customers(name, phone, whatsapp, address), vehicles(reg_number, brand, model, year, fuel_type)'
 
 export async function listInvoices(search = '', status = 'all'): Promise<Invoice[]> {
   let q = supabase.from('invoices').select(INV_SELECT).is('deleted_at', null).order('created_at', { ascending: false })
@@ -249,8 +249,53 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
   return data ? mapInvoice(data) : null
 }
 
+// ---------------------------------------------------------------------------
+// Invoice WhatsApp share logs
+// ---------------------------------------------------------------------------
+export interface ShareLogInput {
+  invoice_id: string
+  customer_id?: string | null
+  shared_by: string
+  shared_by_name: string
+  shared_by_role: string
+  phone_number?: string | null
+  share_method: string
+  status: string
+  error_message?: string | null
+}
+
+export async function logInvoiceShare(input: ShareLogInput) {
+  // Best-effort: a logging failure must never block the actual share.
+  try {
+    await supabase.from('invoice_share_logs').insert(input)
+  } catch {
+    /* ignore */
+  }
+}
+
+export interface ShareLogRow {
+  id: string
+  shared_by_name: string
+  shared_by_role: string
+  phone_number: string | null
+  share_method: string
+  status: string
+  created_at: string
+}
+
+export async function getInvoiceShareLogs(invoiceId: string): Promise<ShareLogRow[]> {
+  const { data, error } = await supabase
+    .from('invoice_share_logs')
+    .select('id, shared_by_name, shared_by_role, phone_number, share_method, status, created_at')
+    .eq('invoice_id', invoiceId)
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return (data ?? []) as unknown as ShareLogRow[]
+}
+
 export interface InvoiceItemRow {
   kind: 'service' | 'part' | 'labour'
+  ref_id: string | null
   name: string
   qty: number
   price: number
@@ -262,6 +307,7 @@ export async function getInvoiceItems(invoiceId: string): Promise<InvoiceItemRow
   if (error) throw new Error(error.message)
   return (data ?? []).map((r: any) => ({
     kind: r.kind,
+    ref_id: r.ref_id ?? null,
     name: r.name,
     qty: r.qty ?? 1,
     price: Number(r.price ?? 0),
@@ -275,11 +321,19 @@ function mapInvoice(r: any): Invoice {
     id: r.id,
     invoice_no: r.invoice_no,
     job_card_id: r.job_card_id ?? null,
+    vehicle_id: r.vehicle_id ?? null,
+    customer_id: r.customer_id ?? null,
     customer_name: r.customers?.name ?? '',
+    customer_phone: r.customers?.phone ?? null,
+    customer_whatsapp: r.customers?.whatsapp ?? r.customers?.phone ?? null,
+    customer_address: r.customers?.address ?? null,
+    fuel_type: r.vehicles?.fuel_type ?? null,
+    payment_method: r.payment_method ?? null,
     vehicle_label: v ? `${v.brand ?? ''} ${v.model ?? ''}${v.year ? ` · ${v.year}` : ''}`.trim() : '',
     reg_number: v?.reg_number ?? '',
     date: (r.created_at ?? '').slice(0, 10),
     subtotal: Number(r.subtotal ?? 0),
+    labour_charge: Number(r.labour_charge ?? 0),
     discount: Number(r.discount ?? 0),
     cgst: Number(r.cgst ?? 0),
     sgst: Number(r.sgst ?? 0),
@@ -609,6 +663,7 @@ export async function createInvoice(input: {
       job_card_id: input.jobCardId ?? null,
       is_gst: input.isGst,
       subtotal,
+      labour_charge: input.labour,
       discount: input.discount,
       cgst,
       sgst,
@@ -648,6 +703,94 @@ export async function createInvoice(input: {
   }
 
   return { id: invoiceId, invoice_no, grand_total, balance }
+}
+
+/**
+ * Edit an existing invoice (add/remove/fix services, spare parts, labour).
+ * Recomputes totals, replaces the line items, and RECONCILES stock — returns
+ * stock for removed/reduced parts and deducts for added/increased parts.
+ */
+export async function updateInvoice(
+  id: string,
+  input: {
+    isGst: boolean
+    services: LineService[]
+    parts: LinePart[]
+    labour: number
+    discount: number
+    cgstPercent: number
+    sgstPercent: number
+    paid: number
+    method: string
+  },
+) {
+  // 1) Existing part quantities (to reconcile stock).
+  const { data: oldItems } = await supabase.from('invoice_items').select('kind, ref_id, qty').eq('invoice_id', id)
+  const oldParts = new Map<string, number>()
+  ;(oldItems ?? []).forEach((it: any) => {
+    if (it.kind === 'part' && it.ref_id) oldParts.set(it.ref_id, (oldParts.get(it.ref_id) ?? 0) + (it.qty ?? 0))
+  })
+
+  // 2) Recompute totals (identical formula to createInvoice).
+  const servicesTotal = input.services.reduce((s, x) => s + x.labour_charge, 0)
+  const partsTotal = input.parts.reduce((s, x) => s + x.qty * x.price, 0)
+  const subtotal = servicesTotal + partsTotal + input.labour - input.discount
+  const cgst = input.isGst ? Math.round((subtotal * input.cgstPercent) / 100) : 0
+  const sgst = input.isGst ? Math.round((subtotal * input.sgstPercent) / 100) : 0
+  const grand_total = subtotal + cgst + sgst
+  const balance = grand_total - input.paid
+  const status = input.paid >= grand_total ? 'paid' : input.paid > 0 ? 'partial' : 'confirmed'
+
+  const { error: upErr } = await supabase
+    .from('invoices')
+    .update({
+      is_gst: input.isGst,
+      subtotal,
+      labour_charge: input.labour,
+      discount: input.discount,
+      cgst,
+      sgst,
+      grand_total,
+      paid: input.paid,
+      balance,
+      payment_method: input.method,
+      status,
+    })
+    .eq('id', id)
+  if (upErr) throw new Error(upErr.message)
+
+  // 3) Replace the line items.
+  await supabase.from('invoice_items').delete().eq('invoice_id', id)
+  const items = [
+    ...input.services.map((s) => ({ invoice_id: id, kind: 'service', ref_id: s.id, name: s.name, qty: 1, price: s.labour_charge, amount: s.labour_charge })),
+    ...input.parts.map((p) => ({ invoice_id: id, kind: 'part', ref_id: p.id, name: p.name, qty: p.qty, price: p.price, amount: p.qty * p.price })),
+  ]
+  if (input.labour > 0) items.push({ invoice_id: id, kind: 'labour', ref_id: null as unknown as string, name: 'Labour Charges', qty: 1, price: input.labour, amount: input.labour })
+  if (items.length) {
+    const { error: e } = await supabase.from('invoice_items').insert(items)
+    if (e) throw new Error(e.message)
+  }
+
+  // 4) Reconcile stock by delta = oldQty - newQty (positive returns stock).
+  const newParts = new Map<string, number>()
+  input.parts.forEach((p) => newParts.set(p.id, (newParts.get(p.id) ?? 0) + p.qty))
+  const partIds = new Set<string>([...oldParts.keys(), ...newParts.keys()])
+  for (const pid of partIds) {
+    const delta = (oldParts.get(pid) ?? 0) - (newParts.get(pid) ?? 0)
+    if (delta === 0) continue
+    const { data: row } = await supabase.from('spare_parts').select('current_qty').eq('id', pid).maybeSingle()
+    if (row) {
+      const prev = (row as { current_qty: number }).current_qty
+      const next = prev + delta
+      await supabase.from('spare_parts').update({ current_qty: next }).eq('id', pid)
+      await supabase.from('stock_movements').insert({
+        part_id: pid, movement_type: 'adjustment', qty: delta, prev_qty: prev, new_qty: next,
+        ref_type: 'invoice_edit', ref_id: id, note: 'Invoice corrected',
+      })
+    }
+  }
+
+  return { id, grand_total, balance }
 }
 
 // ---------------------------------------------------------------------------

@@ -6,13 +6,31 @@
   :root {
     --brand-red: #e11d2a;
     --brand-charcoal: #1e2530;
+    /* Height of the fixed mobile bottom nav; 0 on desktop (nav is hidden). */
+    --app-nav-h: 4rem;
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --app-nav-h: 0px;
+    }
   }
 
   * {
     @apply border-surface-border;
+    box-sizing: border-box;
   }
 
-  html {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+  }
+
+  html,
+  body {
+    overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -20,6 +38,14 @@
     @apply bg-surface-page text-brand-ink antialiased;
     font-feature-settings: 'cv11', 'ss01';
     text-rendering: optimizeLegibility;
+  }
+
+  /* Media never overflows its container on small screens. */
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
   }
 
   /* Nicer scrollbars */
@@ -70,5 +96,15 @@
 
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /*
+   * Sticky bottom action bar (Back / Continue etc.). Sits just above the fixed
+   * mobile bottom-nav on phones, and near the viewport bottom on desktop.
+   * White surface + shadow so page content never bleeds through behind it.
+   */
+  .sticky-action-bar {
+    @apply sticky z-20 mt-4 flex gap-2.5 rounded-2xl border border-surface-border bg-white/95 p-2.5 shadow-card backdrop-blur;
+    bottom: calc(var(--app-nav-h) + env(safe-area-inset-bottom, 0px) + 0.5rem);
   }
 }

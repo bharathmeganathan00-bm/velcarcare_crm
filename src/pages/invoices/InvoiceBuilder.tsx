@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Car, Download, Printer, Save, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { SectionTitle, EmptyState } from '@/components/ui/Misc'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { ServiceCard, SparePartCard } from '@/components/catalogue/CatalogueCards'
 import { QuantitySelector, WhatsAppButton } from '@/components/common/ActionButtons'
 import { useSettings } from '@/context/SettingsContext'
-import { useCreateInvoice, useServices, useSpareParts, useVehicles } from '@/hooks/data'
+import { useCreateInvoice, useUpdateInvoice, useInvoice, useInvoiceItems, useServices, useSpareParts, useVehicles } from '@/hooks/data'
 import { createJobCard, saveInspection } from '@/lib/api'
 import { downloadInvoicePdf, type InvoiceLine } from '@/lib/pdf'
 import { inspectionToArray, type InspectionMap } from '@/lib/inspection'
@@ -30,12 +30,20 @@ interface PrefillState {
 export function InvoiceBuilder() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id: editId } = useParams()
+  const isEdit = !!editId
   const prefill = (location.state as PrefillState | null) ?? {}
   const { settings } = useSettings()
   const { data: vehicles = [], isLoading: vLoading } = useVehicles()
   const { data: allServices = [] } = useServices()
   const { data: allParts = [] } = useSpareParts()
   const createInvoice = useCreateInvoice()
+  const updateInvoice = useUpdateInvoice()
+
+  // Edit mode: load the existing invoice + its items to prefill.
+  const { data: editInvoice, isSuccess: invLoaded } = useInvoice(editId)
+  const { data: editItems = [], isSuccess: itemsLoaded } = useInvoiceItems(editId)
+  const [prefilled, setPrefilled] = useState(false)
 
   const [step, setStep] = useState(0)
   const [vehicleId, setVehicleId] = useState(prefill.vehicleId ?? '')
@@ -46,11 +54,35 @@ export function InvoiceBuilder() {
   const [partQty, setPartQty] = useState<Record<string, number>>(
     () => Object.fromEntries((prefill.parts ?? []).map((p) => [p.id, p.qty])),
   )
-  const [labour, setLabour] = useState(prefill.labour ?? 0)
-  const [discount, setDiscount] = useState(0)
-  const [paid, setPaid] = useState(0)
+  // Money fields are held as strings so decimals type smoothly; parsed non-negative.
+  const [labourStr, setLabourStr] = useState(String(prefill.labour ?? 0))
+  const [discountStr, setDiscountStr] = useState('0')
+  const [paidStr, setPaidStr] = useState('0')
   const [method, setMethod] = useState('Cash')
   const [partQuery, setPartQuery] = useState('')
+
+  // Prefill from the existing invoice once (edit mode only).
+  useEffect(() => {
+    if (!isEdit || prefilled || !invLoaded || !itemsLoaded || !editInvoice) return
+    setVehicleId(editInvoice.vehicle_id ?? '')
+    const svc: Record<string, boolean> = {}
+    const parts: Record<string, number> = {}
+    editItems.forEach((it) => {
+      if (it.kind === 'service' && it.ref_id) svc[it.ref_id] = true
+      if (it.kind === 'part' && it.ref_id) parts[it.ref_id] = (parts[it.ref_id] ?? 0) + it.qty
+    })
+    setSelectedServices(svc)
+    setPartQty(parts)
+    setLabourStr(String(editInvoice.labour_charge ?? 0))
+    setDiscountStr(String(editInvoice.discount ?? 0))
+    setPaidStr(String(editInvoice.paid ?? 0))
+    setMethod(editInvoice.payment_method ?? 'Cash')
+    setPrefilled(true)
+  }, [isEdit, prefilled, invLoaded, itemsLoaded, editInvoice, editItems])
+
+  const labour = toAmount(labourStr)
+  const discount = toAmount(discountStr)
+  const paid = toAmount(paidStr)
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0]
 
@@ -60,11 +92,15 @@ export function InvoiceBuilder() {
   const servicesLines: InvoiceLine[] = chosenServices.map((s) => ({ description: s.name, qty: 1, rate: s.labour_charge, amount: s.labour_charge }))
   const partsLines: InvoiceLine[] = chosenParts.map((p) => ({ description: p.name, qty: partQty[p.id], rate: p.selling_price, amount: partQty[p.id] * p.selling_price }))
 
-  const subtotal = [...servicesLines, ...partsLines].reduce((s, l) => s + l.amount, 0) + labour - discount
-  const cgst = settings.gst_enabled ? Math.round((subtotal * settings.cgst_percent) / 100) : 0
-  const sgst = settings.gst_enabled ? Math.round((subtotal * settings.sgst_percent) / 100) : 0
-  const grand = subtotal + cgst + sgst
-  const balance = grand - paid
+  // Services + Spare Parts + Labour = pre-discount subtotal (numeric, rounded 2dp).
+  const servicesTotal = round2(servicesLines.reduce((s, l) => s + l.amount, 0))
+  const partsTotal = round2(partsLines.reduce((s, l) => s + l.amount, 0))
+  const subtotal = round2(servicesTotal + partsTotal + labour)
+  const taxable = Math.max(0, subtotal - discount)
+  const cgst = settings.gst_enabled ? round2((taxable * settings.cgst_percent) / 100) : 0
+  const sgst = settings.gst_enabled ? round2((taxable * settings.sgst_percent) / 100) : 0
+  const grand = round2(taxable + cgst + sgst)
+  const balance = round2(grand - paid)
 
   const filteredParts = useMemo(() => {
     const t = partQuery.trim().toLowerCase()
@@ -94,6 +130,7 @@ export function InvoiceBuilder() {
     vehicleLabel: `${vehicle.brand} ${vehicle.model} · ${vehicle.year ?? ''}`,
     regNumber: vehicle.reg_number,
     odometer: vehicle.odometer,
+    fuelType: vehicle.fuel_type ?? undefined,
     services: servicesLines,
     parts: partsLines,
     labour,
@@ -103,6 +140,8 @@ export function InvoiceBuilder() {
     grandTotal: grand,
     paid,
     balance,
+    paymentMode: method,
+    paymentStatus: balance <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Pending',
     inspection: inspectionItems,
   }
 
@@ -121,6 +160,27 @@ export function InvoiceBuilder() {
     const services = chosenServices.map((s) => ({ id: s.id, name: s.name, labour_charge: s.labour_charge }))
     const parts = chosenParts.map((p) => ({ id: p.id, name: p.name, qty: partQty[p.id], price: p.selling_price }))
     try {
+      // Edit mode: update the existing invoice (recompute totals + reconcile stock).
+      if (isEdit && editId) {
+        await updateInvoice.mutateAsync({
+          id: editId,
+          input: {
+            isGst: settings.gst_enabled,
+            services,
+            parts,
+            labour,
+            discount,
+            cgstPercent: settings.cgst_percent,
+            sgstPercent: settings.sgst_percent,
+            paid,
+            method,
+          },
+        })
+        toast.success('Invoice updated · stock adjusted')
+        navigate(`/invoices/${editId}`)
+        return
+      }
+
       // Auto-create a backing job card (with the inspection) when the invoice
       // isn't already linked to one — keeps records intact without a separate page.
       let jobCardId = prefill.jobCardId ?? null
@@ -157,13 +217,14 @@ export function InvoiceBuilder() {
     toast.success('Preview PDF downloaded')
   }
 
-  const waMessage = `Dear ${invoiceData.customerName},\nYour vehicle service invoice from VELCARCARE is ready.\n\nVehicle: ${invoiceData.regNumber}\nTotal: ${formatCurrency(grand)}\nPaid: ${formatCurrency(paid)}\nBalance: ${formatCurrency(balance)}\n\nThank you for choosing VELCARCARE.`
+  const labourLine = labour > 0 ? `Labour: ${formatCurrency(labour)}\n` : ''
+  const waMessage = `Dear ${invoiceData.customerName},\nYour vehicle service invoice from VELCARCARE is ready.\n\nVehicle: ${invoiceData.regNumber}\n${labourLine}Total: ${formatCurrency(grand)}\nPaid: ${formatCurrency(paid)}\nBalance: ${formatCurrency(balance)}\n\nThank you for choosing VELCARCARE.`
 
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-5 flex items-center gap-3">
         <Button variant="ghost" size="iconSm" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
-        <SectionTitle title="Create Invoice" subtitle={STEPS[step]} />
+        <SectionTitle title={isEdit ? `Edit Invoice ${editInvoice?.invoice_no ?? ''}`.trim() : 'Create Invoice'} subtitle={STEPS[step]} />
       </div>
 
       <div className="mb-6"><StepProgress steps={STEPS} current={step} onStepClick={(i) => i < step && setStep(i)} /></div>
@@ -174,7 +235,7 @@ export function InvoiceBuilder() {
             <Card>
               <CardHeader><CardTitle>Customer & Vehicle</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <select className="input-base" value={vehicle.id} onChange={(e) => setVehicleId(e.target.value)}>
+                <select className="input-base disabled:opacity-70" value={vehicle.id} disabled={isEdit} onChange={(e) => setVehicleId(e.target.value)}>
                   {vehicles.map((v) => (
                     <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.reg_number} · {v.customer_name}</option>
                   ))}
@@ -233,10 +294,6 @@ export function InvoiceBuilder() {
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-xl bg-surface-muted px-3.5 py-2.5">
-                  <span className="text-sm font-semibold text-slate-600">Labour Charges (₹)</span>
-                  <input value={labour} onChange={(e) => setLabour(Number(e.target.value) || 0)} className="w-28 rounded-lg border border-surface-border px-2 py-1 text-right text-sm font-bold" inputMode="numeric" />
-                </div>
               </CardContent>
             </Card>
           )}
@@ -253,17 +310,13 @@ export function InvoiceBuilder() {
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="mb-1.5 text-sm font-semibold text-slate-700">Discount (₹)</p>
-                    <input value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} className="input-base" inputMode="numeric" />
-                  </div>
-                  <div>
-                    <p className="mb-1.5 text-sm font-semibold text-slate-700">Paid Amount (₹)</p>
-                    <input value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)} className="input-base" inputMode="numeric" />
-                  </div>
+                {/* Labour Charge · Discount · Paid Amount — single column on mobile, row on desktop */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <MoneyField label="Labour Charge (₹)" value={labourStr} onChange={setLabourStr} />
+                  <MoneyField label="Discount (₹)" value={discountStr} onChange={setDiscountStr} />
+                  <MoneyField label="Paid Amount (₹)" value={paidStr} onChange={setPaidStr} />
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setPaid(grand)}>Mark fully paid</Button>
+                <Button variant="outline" size="sm" onClick={() => setPaidStr(String(grand))}>Mark fully paid</Button>
               </CardContent>
             </Card>
           )}
@@ -271,12 +324,12 @@ export function InvoiceBuilder() {
 
         {/* Totals sidebar */}
         <div>
-          <Card className="sticky top-20">
+          <Card className="lg:sticky lg:top-20">
             <CardHeader><CardTitle>Invoice Summary</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              <Total label={`Services (${servicesLines.length})`} value={servicesLines.reduce((s, l) => s + l.amount, 0)} />
-              <Total label={`Spare Parts (${partsLines.length})`} value={partsLines.reduce((s, l) => s + l.amount, 0)} />
-              <Total label="Labour" value={labour} />
+              <Total label={`Services (${servicesLines.length})`} value={servicesTotal} />
+              <Total label={`Spare Parts (${partsLines.length})`} value={partsTotal} />
+              <Total label="Labour Charge" value={labour} />
               {discount > 0 && <Total label="Discount" value={-discount} />}
               {settings.gst_enabled && <><Total label={`CGST ${settings.cgst_percent}%`} value={cgst} /><Total label={`SGST ${settings.sgst_percent}%`} value={sgst} /></>}
               <div className="flex items-center justify-between border-t border-dashed border-surface-border pt-2">
@@ -293,7 +346,9 @@ export function InvoiceBuilder() {
                 <Button className="mt-3 w-full" onClick={() => setStep((s) => s + 1)}>Continue</Button>
               ) : (
                 <div className="mt-3 space-y-2">
-                  <Button className="w-full" loading={createInvoice.isPending} onClick={confirm}><Save className="h-4 w-4" /> Confirm Invoice</Button>
+                  <Button className="w-full" loading={createInvoice.isPending || updateInvoice.isPending} onClick={confirm}>
+                    <Save className="h-4 w-4" /> {isEdit ? 'Update Invoice' : 'Confirm Invoice'}
+                  </Button>
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" onClick={download}><Download className="h-4 w-4" /> PDF</Button>
                     <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
@@ -305,6 +360,41 @@ export function InvoiceBuilder() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** Round to 2 decimals, guarding against NaN. */
+function round2(n: number) {
+  return Math.round((Number(n) || 0) * 100) / 100
+}
+/** Parse a money input string to a non-negative amount (empty/invalid → 0). */
+function toAmount(s: string) {
+  const n = parseFloat(s)
+  return !isFinite(n) || n < 0 ? 0 : round2(n)
+}
+
+/** Full-width ₹ money input: digits + single decimal only, no negatives, empty → 0. */
+function MoneyField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-semibold text-slate-700">{label}</p>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">₹</span>
+        <input
+          value={value}
+          inputMode="decimal"
+          placeholder="0"
+          onChange={(e) => {
+            let v = e.target.value.replace(/[^0-9.]/g, '')
+            const parts = v.split('.')
+            if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('')
+            onChange(v)
+          }}
+          onBlur={(e) => { if (e.target.value.trim() === '') onChange('0') }}
+          className="input-base w-full pl-7"
+        />
       </div>
     </div>
   )

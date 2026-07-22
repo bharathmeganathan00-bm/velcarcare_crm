@@ -64,6 +64,7 @@ export default function App() {
 
               <Route path="/invoices" element={<PermissionGuard module="invoices"><InvoicesList /></PermissionGuard>} />
               <Route path="/invoices/new" element={<PermissionGuard module="invoices" action="add"><InvoiceBuilder /></PermissionGuard>} />
+              <Route path="/invoices/:id/edit" element={<PermissionGuard module="invoices" action="edit"><InvoiceBuilder /></PermissionGuard>} />
               <Route path="/invoices/:id" element={<PermissionGuard module="invoices"><InvoiceDetail /></PermissionGuard>} />
 
               <Route path="/payments" element={<PermissionGuard module="payments"><Payments /></PermissionGuard>} />

@@ -10,12 +10,12 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-page">
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-surface-page">
       <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <TopHeader onMobileMenu={() => setDrawerOpen(true)} />
-        <main className="flex-1 overflow-y-auto px-3 pb-24 pt-4 sm:px-4 sm:pt-5 lg:px-6 lg:pb-8">
+        <main className="flex-1 overflow-y-auto px-3 pb-28 pt-4 sm:px-4 sm:pt-5 lg:px-6 lg:pb-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>

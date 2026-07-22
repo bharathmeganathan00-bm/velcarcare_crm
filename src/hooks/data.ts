@@ -28,6 +28,8 @@ export const useInvoice = (id?: string) =>
   useQuery({ queryKey: ['invoice', id], queryFn: () => api.getInvoice(id!), enabled: !!id })
 export const useInvoiceItems = (id?: string) =>
   useQuery({ queryKey: ['invoice-items', id], queryFn: () => api.getInvoiceItems(id!), enabled: !!id })
+export const useInvoiceShareLogs = (id?: string, enabled = true) =>
+  useQuery({ queryKey: ['invoice-share-logs', id], queryFn: () => api.getInvoiceShareLogs(id!), enabled: !!id && enabled })
 
 // ---- Inspection ----
 export const useInspection = (jobCardId?: string | null) =>
@@ -149,6 +151,18 @@ export function useCreateInvoice() {
     mutationFn: api.createInvoice,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] })
+      qc.invalidateQueries({ queryKey: ['spareparts'] })
+    },
+  })
+}
+export function useUpdateInvoice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof api.updateInvoice>[1] }) => api.updateInvoice(id, input),
+    onSuccess: (_r, { id }) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] })
+      qc.invalidateQueries({ queryKey: ['invoice', id] })
+      qc.invalidateQueries({ queryKey: ['invoice-items', id] })
       qc.invalidateQueries({ queryKey: ['spareparts'] })
     },
   })

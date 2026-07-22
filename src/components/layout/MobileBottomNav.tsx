@@ -68,22 +68,24 @@ export function MobileBottomNav() {
         </div>
       )}
 
-      <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-30 flex h-16 items-center justify-around border-t border-surface-border bg-white lg:hidden">
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex h-16 items-center border-t border-surface-border bg-white lg:hidden">
         {TABS.slice(0, 2).map((t) => (
           <Tab key={t.to} {...t} />
         ))}
 
-        {/* Central FAB */}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className={cn(
-            'flex h-14 w-14 -translate-y-4 items-center justify-center rounded-2xl bg-brand-red text-white shadow-float transition active:scale-95',
-            open && 'rotate-45',
-          )}
-          aria-label="Quick actions"
-        >
-          <Plus className="h-7 w-7" />
-        </button>
+        {/* Central FAB — own equal-width slot so it stays perfectly centred */}
+        <div className="flex flex-1 justify-center">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className={cn(
+              'flex h-14 w-14 -translate-y-3 items-center justify-center rounded-2xl bg-brand-red text-white shadow-float transition active:scale-95',
+              open && 'rotate-45',
+            )}
+            aria-label="Quick actions"
+          >
+            <Plus className="h-7 w-7" />
+          </button>
+        </div>
 
         {TABS.slice(2).map((t) => (
           <Tab key={t.to} {...t} />
@@ -101,13 +103,13 @@ function Tab({ label, to, icon: Icon }: { label: string; to: string; icon: typeo
       end={to === '/'}
       className={({ isActive }) =>
         cn(
-          'flex flex-1 flex-col items-center gap-0.5 text-[10px] font-semibold',
+          'flex flex-1 flex-col items-center gap-0.5 px-1 text-[10px] font-semibold',
           isActive ? 'text-brand-red' : 'text-slate-400',
         )
       }
     >
-      <Icon className="h-5 w-5" />
-      {label}
+      <Icon className="h-5 w-5 shrink-0" />
+      <span className="max-w-full truncate">{label}</span>
     </NavLink>
   )
 }

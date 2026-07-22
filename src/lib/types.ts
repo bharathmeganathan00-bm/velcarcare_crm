@@ -170,11 +170,19 @@ export interface Invoice {
   id: string
   invoice_no: string
   job_card_id?: string | null
+  vehicle_id?: string | null
+  customer_id?: string | null
   customer_name: string
+  customer_phone?: string | null
+  customer_whatsapp?: string | null
+  customer_address?: string | null
+  fuel_type?: string | null
+  payment_method?: string | null
   vehicle_label: string
   reg_number: string
   date: string
   subtotal: number
+  labour_charge?: number
   discount: number
   cgst: number
   sgst: number

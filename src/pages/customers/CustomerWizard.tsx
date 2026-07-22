@@ -11,7 +11,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { CAR_BRANDS, modelsForBrand } from '@/data/carCatalogue'
 import { DEFAULT_BRAND_LOGO, logoUrlForBrandName } from '@/data/carBrands'
 import { useCreateCustomer, useCreateVehicle, useCustomers } from '@/hooks/data'
-import { INSPECTION_ITEMS, defaultInspection, type InspectionMap } from '@/lib/inspection'
+import { INSPECTION_ITEMS, INSPECTION_ICONS, defaultInspection, type InspectionMap } from '@/lib/inspection'
 import type { CarBrand, CarModel } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -320,9 +320,16 @@ export function CustomerWizard() {
                 </div>
               </div>
               <div className="space-y-2">
-                {INSPECTION_ITEMS.map((item) => (
+                {INSPECTION_ITEMS.map((item) => {
+                  const Icon = INSPECTION_ICONS[item]
+                  return (
                   <div key={item} className="flex items-center justify-between rounded-xl border border-surface-border px-3.5 py-2.5">
-                    <span className="text-sm font-semibold text-brand-charcoal">{item}</span>
+                    <span className="flex items-center gap-3 text-sm font-semibold text-brand-charcoal">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-brand-charcoal">
+                        {Icon && <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />}
+                      </span>
+                      {item}
+                    </span>
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => setInspection((s) => ({ ...s, [item]: 'good' }))}
@@ -338,7 +345,8 @@ export function CustomerWizard() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -384,13 +392,22 @@ export function CustomerWizard() {
       </Card>
 
       {/* Sticky action bar */}
-      <div className="sticky bottom-20 z-10 mt-4 flex gap-3 lg:bottom-4">
-        <Button variant="outline" className="flex-1 sm:flex-none sm:px-8" onClick={back}>
+      <div className="sticky-action-bar">
+        <Button variant="outline" className="shrink-0 px-4 sm:px-8" onClick={back}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <Button className="flex-1" disabled={!canNext} loading={saving} onClick={next}>
-          {step === STEPS.length - 1 ? 'Save & Continue to Billing' : 'Continue'}
-          <ArrowRight className="h-4 w-4" />
+        <Button className="min-w-0 flex-1" disabled={!canNext} loading={saving} onClick={next}>
+          <span className="truncate">
+            {step === STEPS.length - 1 ? (
+              <>
+                <span className="sm:hidden">Save &amp; Bill</span>
+                <span className="hidden sm:inline">Save &amp; Continue to Billing</span>
+              </>
+            ) : (
+              'Continue'
+            )}
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0" />
         </Button>
       </div>
     </div>

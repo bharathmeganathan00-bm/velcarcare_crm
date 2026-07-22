@@ -1,4 +1,23 @@
 /** Shared vehicle inspection checklist used in the customer wizard and invoice. */
+import {
+  Droplet,
+  FlaskConical,
+  Battery,
+  CircleDot,
+  Disc,
+  Lightbulb,
+  Megaphone,
+  Snowflake,
+  Waves,
+  LifeBuoy,
+  Cog,
+  Settings,
+  Wind,
+  Droplets,
+  Car,
+  Armchair,
+  type LucideIcon,
+} from 'lucide-react'
 
 export const INSPECTION_ITEMS = [
   'Engine Oil',
@@ -18,6 +37,26 @@ export const INSPECTION_ITEMS = [
   'Body Damage',
   'Interior Condition',
 ] as const
+
+/** Automotive icon per checklist item (closest Lucide match). Shared everywhere. */
+export const INSPECTION_ICONS: Record<string, LucideIcon> = {
+  'Engine Oil': Droplet,
+  Coolant: FlaskConical,
+  Battery: Battery,
+  Tyres: CircleDot,
+  Brakes: Disc,
+  Lights: Lightbulb,
+  Horn: Megaphone,
+  AC: Snowflake,
+  Suspension: Waves,
+  Steering: LifeBuoy,
+  Clutch: Cog,
+  Gearbox: Settings,
+  Wipers: Wind,
+  'Fluid Leakage': Droplets,
+  'Body Damage': Car,
+  'Interior Condition': Armchair,
+}
 
 export type InspectionStatus = 'good' | 'not'
 

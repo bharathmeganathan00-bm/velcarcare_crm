@@ -57,7 +57,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
   }
 
   return (
-    <Dialog open={open} onClose={onClose} size="lg" className="sm:mt-[-10vh]">
+    <Dialog open={open} onClose={onClose} size="lg" className="sm:self-start sm:mt-[10vh]">
       <div className="flex items-center gap-3 border-b border-surface-border px-4 py-3">
         <Search className="h-5 w-5 text-slate-400" />
         <input

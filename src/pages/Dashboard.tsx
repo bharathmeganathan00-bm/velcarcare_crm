@@ -54,16 +54,16 @@ export function Dashboard() {
   const totalActive = distribution.reduce((s, d) => s + d.value, 0)
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-2xl">
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-2 sm:gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-extrabold tracking-tight text-brand-charcoal sm:text-2xl">
             Welcome back, {user?.name?.split(' ')[0]} 👋
           </h1>
-          <p className="mt-0.5 text-sm text-slate-500">Here's what's happening at the workshop today.</p>
+          <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">Here's what's happening at the workshop today.</p>
         </div>
-        <Link to="/job-cards/new">
-          <Button><Plus className="h-4 w-4" /> New Job Card</Button>
+        <Link to="/job-cards/new" className="shrink-0">
+          <Button className="h-10 px-3 sm:h-11 sm:px-4"><Plus className="h-4 w-4" /> New Job Card</Button>
         </Link>
       </div>
 

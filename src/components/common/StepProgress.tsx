@@ -25,13 +25,13 @@ export function StepProgress({
             >
               <span
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition',
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition sm:h-9 sm:w-9 sm:text-sm',
                   done && 'bg-status-success text-white',
-                  active && 'bg-brand-red text-white ring-4 ring-brand-red/15',
+                  active && 'bg-brand-red text-white ring-2 ring-brand-red/15 sm:ring-4',
                   !done && !active && 'bg-surface-muted text-slate-400',
                 )}
               >
-                {done ? <Check className="h-4 w-4" /> : i + 1}
+                {done ? <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : i + 1}
               </span>
               <span
                 className={cn(
@@ -43,7 +43,7 @@ export function StepProgress({
               </span>
             </button>
             {i < steps.length - 1 && (
-              <div className={cn('mx-2 h-0.5 flex-1 rounded-full', done ? 'bg-status-success' : 'bg-surface-border')} />
+              <div className={cn('mx-1 h-0.5 flex-1 rounded-full sm:mx-2', done ? 'bg-status-success' : 'bg-surface-border')} />
             )}
           </div>
         )
