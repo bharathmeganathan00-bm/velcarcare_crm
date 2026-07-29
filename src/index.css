@@ -104,7 +104,13 @@
    * White surface + shadow so page content never bleeds through behind it.
    */
   .sticky-action-bar {
-    @apply sticky z-20 mt-4 flex gap-2.5 rounded-2xl border border-surface-border bg-white/95 p-2.5 shadow-card backdrop-blur;
-    bottom: calc(var(--app-nav-h) + env(safe-area-inset-bottom, 0px) + 0.5rem);
+    @apply sticky z-20 mt-4 flex items-center gap-2.5 rounded-2xl border border-surface-border bg-white/95 p-2.5 shadow-card backdrop-blur;
+    /* Clear the fixed bottom nav AND the elevated centre FAB that pokes above it. */
+    bottom: calc(var(--app-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
+  }
+  @media (min-width: 1024px) {
+    .sticky-action-bar {
+      bottom: 1rem;
+    }
   }
 }

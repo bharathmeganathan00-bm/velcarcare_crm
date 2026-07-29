@@ -5,7 +5,6 @@ import {
   Home,
   MoreHorizontal,
   Plus,
-  ReceiptText,
   Users,
   UserPlus,
   Car,
@@ -14,11 +13,15 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const TABS = [
+// Two tabs each side of the centre FAB — keeps the FAB perfectly centred.
+// Everything else (Vehicles, Payments, Reports…) is reachable from More / the top menu.
+const LEFT_TABS = [
   { label: 'Home', to: '/', icon: Home },
   { label: 'Customers', to: '/customers', icon: Users },
+]
+const RIGHT_TABS = [
   { label: 'Job Cards', to: '/job-cards', icon: ClipboardList },
-  { label: 'Billing', to: '/invoices', icon: ReceiptText },
+  { label: 'More', to: '/more', icon: MoreHorizontal },
 ]
 
 const QUICK_ACTIONS = [
@@ -68,13 +71,13 @@ export function MobileBottomNav() {
         </div>
       )}
 
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex h-16 items-center border-t border-surface-border bg-white lg:hidden">
-        {TABS.slice(0, 2).map((t) => (
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex h-16 items-stretch border-t border-surface-border bg-white lg:hidden">
+        {LEFT_TABS.map((t) => (
           <Tab key={t.to} {...t} />
         ))}
 
         {/* Central FAB — own equal-width slot so it stays perfectly centred */}
-        <div className="flex flex-1 justify-center">
+        <div className="flex flex-1 items-center justify-center">
           <button
             onClick={() => setOpen((v) => !v)}
             className={cn(
@@ -87,10 +90,9 @@ export function MobileBottomNav() {
           </button>
         </div>
 
-        {TABS.slice(2).map((t) => (
+        {RIGHT_TABS.map((t) => (
           <Tab key={t.to} {...t} />
         ))}
-        <Tab label="More" to="/more" icon={MoreHorizontal} />
       </nav>
     </>
   )
@@ -103,7 +105,7 @@ function Tab({ label, to, icon: Icon }: { label: string; to: string; icon: typeo
       end={to === '/'}
       className={({ isActive }) =>
         cn(
-          'flex flex-1 flex-col items-center gap-0.5 px-1 text-[10px] font-semibold',
+          'flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-semibold',
           isActive ? 'text-brand-red' : 'text-slate-400',
         )
       }
