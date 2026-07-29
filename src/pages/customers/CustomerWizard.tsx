@@ -120,7 +120,7 @@ export function CustomerWizard() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl pb-20 lg:pb-0">
       <div className="mb-5 flex items-center gap-3">
         <Button variant="ghost" size="iconSm" onClick={back}>
           <ArrowLeft className="h-5 w-5" />

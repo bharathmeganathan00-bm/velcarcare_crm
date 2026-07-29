@@ -104,12 +104,21 @@
    * White surface + shadow so page content never bleeds through behind it.
    */
   .sticky-action-bar {
-    @apply sticky z-20 mt-4 flex items-center gap-2.5 rounded-2xl border border-surface-border bg-white/95 p-2.5 shadow-card backdrop-blur;
-    /* Clear the fixed bottom nav AND the elevated centre FAB that pokes above it. */
-    bottom: calc(var(--app-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
+    @apply flex items-center gap-2.5;
   }
+  /* Mobile: a solid bar FIXED just above the bottom nav — content scrolls above it,
+     nothing shows through behind it. */
+  @media (max-width: 1023.98px) {
+    .sticky-action-bar {
+      @apply fixed inset-x-0 z-30 border-t border-surface-border bg-white px-3 py-2.5;
+      bottom: calc(var(--app-nav-h) + env(safe-area-inset-bottom, 0px));
+      box-shadow: 0 -3px 12px rgba(16, 21, 32, 0.07);
+    }
+  }
+  /* Desktop: a rounded floating bar near the bottom of the content column. */
   @media (min-width: 1024px) {
     .sticky-action-bar {
+      @apply sticky z-20 mt-4 rounded-2xl border border-surface-border bg-white/95 p-2.5 shadow-card backdrop-blur;
       bottom: 1rem;
     }
   }
