@@ -167,6 +167,13 @@ export function useUpdateInvoice() {
     },
   })
 }
+export function useDeleteInvoice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteInvoice(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['invoices'] }),
+  })
+}
 export function useCreateStaff() {
   const qc = useQueryClient()
   return useMutation({

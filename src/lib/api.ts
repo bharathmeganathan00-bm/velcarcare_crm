@@ -249,6 +249,12 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
   return data ? mapInvoice(data) : null
 }
 
+export async function deleteInvoice(id: string) {
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('invoices').update({ deleted_at: now }).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 // ---------------------------------------------------------------------------
 // Invoice WhatsApp share logs
 // ---------------------------------------------------------------------------

@@ -143,6 +143,16 @@ export function InvoiceDetail() {
         />
       </div>
 
+      {/* Company header (printed on invoice) */}
+      <div className="mb-3">
+        <p className="text-sm font-bold text-brand-charcoal">{settings.name}</p>
+        <p className="text-xs text-slate-500">{settings.address}</p>
+        <p className="text-xs text-slate-500">{settings.phones.filter(Boolean).join(' · ')}{settings.email ? ` · ${settings.email}` : ''}</p>
+        {settings.gst_enabled && settings.gst_number && (
+          <p className="mt-1 text-xs font-semibold text-brand-charcoal">GSTIN: {settings.gst_number}</p>
+        )}
+      </div>
+
       <Card>
         <CardHeader><CardTitle>{inv.customer_name}</CardTitle></CardHeader>
         <CardContent className="space-y-2">

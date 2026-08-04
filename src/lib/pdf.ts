@@ -135,6 +135,16 @@ export async function buildInvoicePdf(company: CompanySettings, data: InvoicePdf
   const phones = (company.phones || []).filter(Boolean).join(' | ')
   if (phones) { marker(cy); doc.text(phones, M + 9, cy); cy += 12 }
   if (company.email) { marker(cy); doc.text(company.email, M + 9, cy); cy += 12 }
+  // GST number (optional)
+  if (company.gst_enabled && company.gst_number) {
+    marker(cy)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text(`GSTIN: ${company.gst_number}`, M + 9, cy)
+    cy += 12
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.2)
+  }
 
   // Dark panel (top-right) with car silhouette + INVOICE
   const pX = W * 0.5, pY = 24, pW = W - M - pX, pH = 64
