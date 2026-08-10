@@ -51,6 +51,11 @@ export async function updateCustomer(id: string, patch: Partial<Customer>) {
       whatsapp: patch.whatsapp || patch.phone,
       alt_phone: patch.alt_phone,
       email: patch.email,
+      gst_number: patch.gst_number,
+      gst_name: patch.gst_name,
+      account_name: patch.account_name,
+      account_number: patch.account_number,
+      ifsc: patch.ifsc,
       address: patch.address,
       notes: patch.notes,
     })
@@ -74,6 +79,11 @@ export async function createCustomer(payload: Partial<Customer>): Promise<Custom
       phone: payload.phone,
       whatsapp: payload.whatsapp || payload.phone,
       alt_phone: payload.alt_phone,
+      gst_number: payload.gst_number,
+      gst_name: payload.gst_name,
+      account_name: payload.account_name,
+      account_number: payload.account_number,
+      ifsc: payload.ifsc,
       email: payload.email,
       address: payload.address,
       notes: payload.notes,
@@ -90,6 +100,11 @@ function mapCustomer(r: any): Customer {
     phone: r.phone,
     whatsapp: r.whatsapp,
     alt_phone: r.alt_phone,
+    gst_number: r.gst_number ?? null,
+    gst_name: r.gst_name ?? null,
+    account_name: r.account_name ?? null,
+    account_number: r.account_number ?? null,
+    ifsc: r.ifsc ?? null,
     email: r.email,
     address: r.address,
     notes: r.notes,
@@ -333,6 +348,11 @@ function mapInvoice(r: any): Invoice {
     customer_phone: r.customers?.phone ?? null,
     customer_whatsapp: r.customers?.whatsapp ?? r.customers?.phone ?? null,
     customer_address: r.customers?.address ?? null,
+    customer_gst_number: r.customers?.gst_number ?? null,
+    customer_gst_name: r.customers?.gst_name ?? null,
+    customer_account_name: r.customers?.account_name ?? null,
+    customer_account_number: r.customers?.account_number ?? null,
+    customer_ifsc: r.customers?.ifsc ?? null,
     fuel_type: r.vehicles?.fuel_type ?? null,
     payment_method: r.payment_method ?? null,
     vehicle_label: v ? `${v.brand ?? ''} ${v.model ?? ''}${v.year ? ` · ${v.year}` : ''}`.trim() : '',
@@ -560,11 +580,57 @@ export async function createJobCard(input: {
   labour: number
   status?: string
 }) {
-  const jobcard_no = await nextSequence('JC')
+  // If an active job card exists for this vehicle, update it instead so edits continue
+  // using the same job card instead of creating duplicates.
+  const existing = await supabase
+    .from('job_cards')
+    .select('id, jobcard_no')
+    .eq('vehicle_id', input.vehicle.id)
+    .eq('customer_id', input.vehicle.customer_id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   const services_total = input.services.reduce((s, x) => s + x.labour_charge, 0)
   const parts_total = input.parts.reduce((s, x) => s + x.qty * x.price, 0)
   const grand_total = services_total + parts_total + input.labour
 
+  if (existing.data && !existing.error) {
+    // Update existing job card totals and replace line items
+    const jcId = (existing.data as any).id
+    const jcNo = (existing.data as any).jobcard_no
+    const { error: upErr } = await supabase.from('job_cards').update({
+      odometer: input.vehicle.odometer ?? null,
+      complaints: input.complaints ?? null,
+      status: input.status ?? 'received',
+      services_total,
+      parts_total,
+      labour_total: input.labour,
+      grand_total,
+    }).eq('id', jcId)
+    if (upErr) throw new Error(upErr.message)
+
+    // Replace services and parts
+    await supabase.from('job_card_services').delete().eq('job_card_id', jcId)
+    if (input.services.length) {
+      const { error: e } = await supabase.from('job_card_services').insert(
+        input.services.map((s) => ({ job_card_id: jcId, service_id: s.id, name: s.name, labour_charge: s.labour_charge })),
+      )
+      if (e) throw new Error(e.message)
+    }
+    await supabase.from('job_card_parts').delete().eq('job_card_id', jcId)
+    if (input.parts.length) {
+      const { error: e } = await supabase.from('job_card_parts').insert(
+        input.parts.map((p) => ({ job_card_id: jcId, part_id: p.id, name: p.name, qty: p.qty, price: p.price })),
+      )
+      if (e) throw new Error(e.message)
+    }
+    return { id: jcId, jobcard_no: jcNo }
+  }
+
+  // No existing active job card — create a fresh one
+  const jobcard_no = await nextSequence('JC')
   const { data, error } = await supabase
     .from('job_cards')
     .insert({
@@ -597,6 +663,12 @@ export async function createJobCard(input: {
     if (e) throw new Error(e.message)
   }
   return { id: jobCardId, jobcard_no }
+}
+
+export async function deleteJobCard(id: string) {
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('job_cards').update({ deleted_at: now }).eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 // ---------------------------------------------------------------------------

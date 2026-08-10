@@ -67,26 +67,38 @@ export function QuantitySelector({
   onChange,
   min = 0,
   max = 9999,
+  step = 1,
 }: {
   value: number
   onChange: (v: number) => void
   min?: number
   max?: number
+  step?: number
 }) {
+  const decimals = (() => {
+    const s = String(step)
+    if (s.includes('.')) return s.split('.')[1].length
+    return 0
+  })()
+
+  function decFormat(n: number) {
+    return decimals > 0 ? Number(n.toFixed(decimals)) : n
+  }
+
   return (
     <div className="inline-flex items-center rounded-xl border border-surface-border">
       <button
         type="button"
-        onClick={() => onChange(Math.max(min, value - 1))}
+        onClick={() => onChange(decFormat(Math.max(min, +(value - step))))}
         className="flex h-9 w-9 items-center justify-center rounded-l-xl text-slate-500 hover:bg-surface-muted disabled:opacity-40"
         disabled={value <= min}
       >
         <Minus className="h-4 w-4" />
       </button>
-      <span className="w-9 text-center text-sm font-bold text-brand-charcoal">{value}</span>
+      <span className="w-12 text-center text-sm font-bold text-brand-charcoal">{decimals > 0 ? value.toFixed(decimals) : String(value)}</span>
       <button
         type="button"
-        onClick={() => onChange(Math.min(max, value + 1))}
+        onClick={() => onChange(decFormat(Math.min(max, +(value + step))))}
         className="flex h-9 w-9 items-center justify-center rounded-r-xl text-slate-500 hover:bg-surface-muted disabled:opacity-40"
         disabled={value >= max}
       >

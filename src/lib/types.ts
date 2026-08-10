@@ -53,6 +53,11 @@ export interface Customer {
   alt_phone?: string | null
   email?: string | null
   address?: string | null
+  gst_number?: string | null
+  gst_name?: string | null
+  account_name?: string | null
+  account_number?: string | null
+  ifsc?: string | null
   notes?: string | null
   vehicle_count: number
   total_spent: number
@@ -176,6 +181,11 @@ export interface Invoice {
   customer_phone?: string | null
   customer_whatsapp?: string | null
   customer_address?: string | null
+  customer_gst_number?: string | null
+  customer_gst_name?: string | null
+  customer_account_name?: string | null
+  customer_account_number?: string | null
+  customer_ifsc?: string | null
   fuel_type?: string | null
   payment_method?: string | null
   vehicle_label: string

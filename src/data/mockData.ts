@@ -52,11 +52,14 @@ export const MOCK_JOBCARDS: JobCard[] = [
 ]
 
 export const MOCK_SPARE_PARTS: SparePart[] = [
-  { id: 'p1', name: 'Engine Oil SW30', category: 'Fluids', part_number: 'EO-5W30-1L', unit: 'Litre', purchase_price: 320, selling_price: 450, gst: 18, current_qty: 2, min_qty: 6, rack_location: 'A1', warranty: '—', active: true },
-  { id: 'p2', name: 'Oil Filter', category: 'Filters', part_number: 'OF-1042', unit: 'Piece', purchase_price: 120, selling_price: 180, gst: 18, current_qty: 3, min_qty: 8, rack_location: 'B2', warranty: '—', active: true },
-  { id: 'p3', name: 'Air Filter', category: 'Filters', part_number: 'AF-2210', unit: 'Piece', purchase_price: 170, selling_price: 250, gst: 18, current_qty: 4, min_qty: 8, rack_location: 'B3', warranty: '—', active: true },
-  { id: 'p4', name: 'Brake Pad Front', category: 'Brake', part_number: 'BP-F-556', unit: 'Set', purchase_price: 620, selling_price: 950, gst: 18, current_qty: 1, min_qty: 5, rack_location: 'C1', warranty: '6 months', active: true },
-  { id: 'p5', name: 'Battery SSAH', category: 'Battery', part_number: 'BAT-35AH', unit: 'Piece', purchase_price: 3800, selling_price: 4600, gst: 18, current_qty: 2, min_qty: 4, rack_location: 'D1', warranty: '24 months', active: true },
+  { id: 'p1', name: 'Engine Oil 1L', category: 'Fluids', part_number: 'EO-1L', unit: 'Litre', purchase_price: 320, selling_price: 450, gst: 18, current_qty: 2, min_qty: 6, rack_location: 'A1', warranty: '—', active: true },
+  { id: 'p1a', name: 'Engine Oil 1.5L', category: 'Fluids', part_number: 'EO-1.5L', unit: 'Litre', purchase_price: 470, selling_price: 650, gst: 18, current_qty: 1, min_qty: 4, rack_location: 'A1', warranty: '—', active: true },
+  { id: 'p2', name: 'Coolant 1L', category: 'Fluids', part_number: 'CL-1L', unit: 'Litre', purchase_price: 140, selling_price: 210, gst: 18, current_qty: 9, min_qty: 6, rack_location: 'A2', warranty: '—', active: true },
+  { id: 'p2a', name: 'Coolant 1.5L', category: 'Fluids', part_number: 'CL-1.5L', unit: 'Litre', purchase_price: 210, selling_price: 310, gst: 18, current_qty: 5, min_qty: 4, rack_location: 'A2', warranty: '—', active: true },
+  { id: 'p3', name: 'Oil Filter', category: 'Filters', part_number: 'OF-1042', unit: 'Piece', purchase_price: 120, selling_price: 180, gst: 18, current_qty: 3, min_qty: 8, rack_location: 'B2', warranty: '—', active: true },
+  { id: 'p4', name: 'Air Filter', category: 'Filters', part_number: 'AF-2210', unit: 'Piece', purchase_price: 170, selling_price: 250, gst: 18, current_qty: 4, min_qty: 8, rack_location: 'B3', warranty: '—', active: true },
+  { id: 'p5', name: 'Brake Pad Front', category: 'Brake', part_number: 'BP-F-556', unit: 'Set', purchase_price: 620, selling_price: 950, gst: 18, current_qty: 1, min_qty: 5, rack_location: 'C1', warranty: '6 months', active: true },
+  { id: 'p6', name: 'Battery SSAH', category: 'Battery', part_number: 'BAT-35AH', unit: 'Piece', purchase_price: 3800, selling_price: 4600, gst: 18, current_qty: 2, min_qty: 4, rack_location: 'D1', warranty: '24 months', active: true },
   { id: 'p6', name: 'Spark Plug', category: 'Electrical', part_number: 'SP-778', unit: 'Piece', purchase_price: 85, selling_price: 120, gst: 18, current_qty: 6, min_qty: 12, rack_location: 'E2', warranty: '—', active: true },
   { id: 'p7', name: 'Wiper Blade', category: 'Body', part_number: 'WB-18', unit: 'Piece', purchase_price: 180, selling_price: 280, gst: 18, current_qty: 14, min_qty: 6, rack_location: 'F1', warranty: '—', active: true },
   { id: 'p8', name: 'Coolant 1L', category: 'Fluids', part_number: 'CL-1L', unit: 'Litre', purchase_price: 140, selling_price: 210, gst: 18, current_qty: 9, min_qty: 6, rack_location: 'A2', warranty: '—', active: true },

@@ -96,6 +96,17 @@ export function useUpdateJobCardStatus() {
     },
   })
 }
+
+export function useDeleteJobCard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteJobCard(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['jobcards'] })
+      qc.invalidateQueries({ queryKey: ['jobcard'] })
+    },
+  })
+}
 export function useCreateSparePart() {
   const qc = useQueryClient()
   return useMutation({

@@ -34,6 +34,11 @@ export function CustomerWizard() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
+  const [gstNumber, setGstNumber] = useState('')
+  const [gstName, setGstName] = useState('')
+  const [accountName, setAccountName] = useState('')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [ifsc, setIfsc] = useState('')
 
   // Step 2-5 — vehicle
   const [brand, setBrand] = useState<CarBrand | null>(null)
@@ -97,6 +102,11 @@ export function CustomerWizard() {
         whatsapp: phone.replace(/\D/g, ''),
         email: email || undefined,
         address: address || undefined,
+        gst_number: gstNumber || undefined,
+        gst_name: gstName || undefined,
+        account_name: accountName || undefined,
+        account_number: accountNumber || undefined,
+        ifsc: ifsc || undefined,
       })
       const vehicle = await createVehicle.mutateAsync({
         customer_id: customer.id,
@@ -179,6 +189,17 @@ export function CustomerWizard() {
                   <Field label="Address">
                     <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Door no, street, city" />
                   </Field>
+                  <Field label="GST Number">
+                    <Input value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} placeholder="22AAAAA0000A1Z5" />
+                  </Field>
+                  <Field label="GST Name (Business name)">
+                    <Input value={gstName} onChange={(e) => setGstName(e.target.value)} placeholder="As on GST" />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Account Name"><Input value={accountName} onChange={(e) => setAccountName(e.target.value)} /></Field>
+                    <Field label="Account No"><Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} /></Field>
+                  </div>
+                  <Field label="IFSC"><Input value={ifsc} onChange={(e) => setIfsc(e.target.value)} /></Field>
                 </div>
               </details>
             </div>

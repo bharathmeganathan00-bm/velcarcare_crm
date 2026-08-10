@@ -117,6 +117,11 @@ create table customers (
   alt_phone text,
   email text,
   address text,
+  gst_number text,
+  gst_name text,
+  account_name text,
+  account_number text,
+  ifsc text,
   notes text,
   created_by uuid references profiles(id),
   updated_by uuid references profiles(id),
@@ -971,7 +976,10 @@ on conflict (name) do nothing;
 
 -- Sample spare parts ---------------------------------------------------------
 insert into spare_parts (name, category, part_number, unit, purchase_price, selling_price, gst, opening_qty, current_qty, min_qty, rack_location, warranty) values
-  ('Engine Oil 5W30','Fluids','EO-5W30-1L','Litre',320,450,18,2,2,6,'A1','—'),
+  ('Engine Oil 1L','Fluids','EO-1L','Litre',320,450,18,2,2,6,'A1','—'),
+  ('Engine Oil 1.5L','Fluids','EO-1.5L','Litre',470,650,18,1,1,4,'A1','—'),
+  ('Coolant 1L','Fluids','CL-1L','Litre',140,210,18,9,9,6,'A2','—'),
+  ('Coolant 1.5L','Fluids','CL-1.5L','Litre',210,310,18,5,5,4,'A2','—'),
   ('Oil Filter','Filters','OF-1042','Piece',120,180,18,3,3,8,'B2','—'),
   ('Air Filter','Filters','AF-2210','Piece',170,250,18,4,4,8,'B3','—'),
   ('Cabin AC Filter','Filters','CF-330','Piece',150,240,18,10,10,6,'B4','—'),

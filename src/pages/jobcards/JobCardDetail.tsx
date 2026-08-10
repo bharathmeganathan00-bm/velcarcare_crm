@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { StatusBadge, JOBCARD_STATUS } from '@/components/ui/StatusBadge'
 import { WhatsAppButton } from '@/components/common/ActionButtons'
-import { useJobCard, useUpdateJobCardStatus } from '@/hooks/data'
+import { useJobCard, useUpdateJobCardStatus, useDeleteJobCard } from '@/hooks/data'
+import { ConfirmDialog } from '@/components/ui/Dialog'
 import { formatCurrency } from '@/lib/utils'
 import type { JobCardStatus } from '@/lib/types'
 
@@ -19,6 +20,8 @@ export function JobCardDetail() {
   const { data: jc, isLoading } = useJobCard(id)
   const updateStatus = useUpdateJobCardStatus()
   const [status, setStatus] = useState<JobCardStatus>('received')
+  const deleteJob = useDeleteJobCard()
+  const [confirmDel, setConfirmDel] = useState(false)
 
   useEffect(() => { if (jc) setStatus(jc.status) }, [jc])
 
@@ -28,7 +31,8 @@ export function JobCardDetail() {
   const s = JOBCARD_STATUS[status]
 
   return (
-    <div>
+    <>
+      <div>
       <div className="mb-5 flex items-center gap-3">
         <Button variant="ghost" size="iconSm" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
         <SectionTitle title={jc.jobcard_no} subtitle={`${jc.customer_name} · ${jc.reg_number}`} action={<StatusBadge tone={s.tone} dot>{s.label}</StatusBadge>} />
@@ -87,15 +91,33 @@ export function JobCardDetail() {
             </div>
             <div className="space-y-2 pt-2">
               <Button className="w-full" onClick={() => navigate('/invoices/new')}><FileText className="h-4 w-4" /> Generate Invoice</Button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
                 <WhatsAppButton phone="9787549179" label="Update" message={`Dear ${jc.customer_name}, your vehicle ${jc.reg_number} status at VELCARCARE: ${s.label}.`} />
+                <Button variant="ghost" className="text-status-danger" onClick={() => setConfirmDel(true)}>Delete</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+      <ConfirmDialog
+      open={confirmDel}
+      onClose={() => setConfirmDel(false)}
+      onConfirm={async () => {
+        setConfirmDel(false)
+        try {
+          await deleteJob.mutateAsync(jc.id)
+          toast.success('Job card deleted')
+          navigate('/job-cards')
+        } catch (e) { toast.error(String((e as Error).message)) }
+      }}
+      title="Delete job card?"
+      description="This will remove the job card from lists but keep historic invoices intact."
+      confirmLabel="Delete"
+      loading={deleteJob.isPending}
+    />
+    </>
   )
 }
 

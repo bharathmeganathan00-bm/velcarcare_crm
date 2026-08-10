@@ -278,7 +278,15 @@ function PartDialog({ initial, isEdit, saving, deleting, onClose, onSave, onDele
             <Field label="Part Number"><Input value={f.part_number} onChange={(e) => set('part_number', e.target.value)} /></Field>
             <Field label="Purchase Price (₹)"><Input value={f.purchase_price} onChange={(e) => set('purchase_price', Number(e.target.value) || 0)} inputMode="numeric" /></Field>
             <Field label="Selling Amount (₹)"><Input value={f.selling_price} onChange={(e) => set('selling_price', Number(e.target.value) || 0)} inputMode="numeric" /></Field>
-            <Field label="Unit"><Input value={f.unit} onChange={(e) => set('unit', e.target.value)} /></Field>
+            <Field label="Unit">
+              <select className="input-base" value={f.unit} onChange={(e) => set('unit', e.target.value)}>
+                <option>Piece</option>
+                <option>Set</option>
+                <option>Litre</option>
+                <option>Bottle</option>
+                <option>Box</option>
+              </select>
+            </Field>
             <Field label="GST %"><Input value={f.gst} onChange={(e) => set('gst', Number(e.target.value) || 0)} inputMode="numeric" /></Field>
             <Field label="Current Stock"><Input value={f.current_qty} onChange={(e) => set('current_qty', Number(e.target.value) || 0)} inputMode="numeric" /></Field>
             <Field label="Min Stock"><Input value={f.min_qty} onChange={(e) => set('min_qty', Number(e.target.value) || 0)} inputMode="numeric" /></Field>

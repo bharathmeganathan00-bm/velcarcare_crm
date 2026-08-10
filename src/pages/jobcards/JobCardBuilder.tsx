@@ -182,7 +182,13 @@ export function JobCardBuilder() {
                         {(partQty[p.id] ?? 0) > 0 && (
                           <div className="mt-1 flex items-center justify-end gap-2 pr-1">
                             <span className="text-xs text-slate-400">Qty</span>
-                            <QuantitySelector value={partQty[p.id]} onChange={(v) => setPartQty((q) => ({ ...q, [p.id]: v }))} />
+                            <QuantitySelector
+                              value={partQty[p.id]}
+                              onChange={(v) => setPartQty((q) => ({ ...q, [p.id]: v }))}
+                              step={p.unit === 'Litre' || p.unit === 'L' ? 0.5 : 1}
+                              min={p.unit === 'Litre' || p.unit === 'L' ? 1 : 0}
+                              max={p.unit === 'Litre' || p.unit === 'L' ? 9 : 9999}
+                            />
                           </div>
                         )}
                       </div>

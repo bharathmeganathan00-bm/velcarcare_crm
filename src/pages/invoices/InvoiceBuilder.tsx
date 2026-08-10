@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { ServiceCard, SparePartCard } from '@/components/catalogue/CatalogueCards'
 import { QuantitySelector, WhatsAppButton } from '@/components/common/ActionButtons'
 import { useSettings } from '@/context/SettingsContext'
+import { useCustomer, useUpdateCustomer } from '@/hooks/data'
 import { useCreateInvoice, useUpdateInvoice, useInvoice, useInvoiceItems, useServices, useSpareParts, useVehicles } from '@/hooks/data'
 import { createJobCard, saveInspection } from '@/lib/api'
 import { downloadInvoicePdf, type InvoiceLine } from '@/lib/pdf'
@@ -61,6 +62,8 @@ export function InvoiceBuilder() {
   const [method, setMethod] = useState('Cash')
   const [partQuery, setPartQuery] = useState('')
 
+  
+
   // Prefill from the existing invoice once (edit mode only).
   useEffect(() => {
     if (!isEdit || prefilled || !invLoaded || !itemsLoaded || !editInvoice) return
@@ -85,6 +88,23 @@ export function InvoiceBuilder() {
   const paid = toAmount(paidStr)
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0]
+
+  const updateCustomer = useUpdateCustomer()
+  const { data: currentCustomer } = useCustomer(vehicle ? vehicle.customer_id : undefined)
+  const [gstNumber, setGstNumber] = useState('')
+  const [gstName, setGstName] = useState('')
+  const [accountName, setAccountName] = useState('')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [ifscCode, setIfscCode] = useState('')
+
+  useEffect(() => {
+    if (!currentCustomer) return
+    setGstNumber(currentCustomer.gst_number ?? '')
+    setGstName(currentCustomer.gst_name ?? '')
+    setAccountName(currentCustomer.account_name ?? '')
+    setAccountNumber(currentCustomer.account_number ?? '')
+    setIfscCode(currentCustomer.ifsc ?? '')
+  }, [currentCustomer])
 
   const chosenServices = allServices.filter((s) => selectedServices[s.id])
   const chosenParts = allParts.filter((p) => (partQty[p.id] ?? 0) > 0)
@@ -126,7 +146,13 @@ export function InvoiceBuilder() {
     date: '',
     jobCardNo: prefill.jobCardId ? 'Linked' : undefined,
     customerName: vehicle.customer_name ?? 'Customer',
-    customerPhone: '',
+    customerPhone: vehicle?.customer_name ? '' : '',
+    customerAddress: vehicle?.customer_name ? '' : undefined,
+    customerGstNumber: gstNumber || undefined,
+    customerGstName: gstName || undefined,
+    customerAccountName: accountName || undefined,
+    customerAccountNumber: accountNumber || undefined,
+    customerIfsc: ifscCode || undefined,
     vehicleLabel: `${vehicle.brand} ${vehicle.model} · ${vehicle.year ?? ''}`,
     regNumber: vehicle.reg_number,
     odometer: vehicle.odometer,
@@ -243,6 +269,42 @@ export function InvoiceBuilder() {
                 <Field label="Customer" value={invoiceData.customerName} />
                 <Field label="Vehicle" value={invoiceData.vehicleLabel} />
                 <Field label="Registration" value={invoiceData.regNumber} />
+                <div className="rounded-xl border border-surface-border p-3">
+                  <p className="mb-2 text-sm font-bold text-brand-charcoal">Customer GST & Bank Details</p>
+                  <div className="space-y-2">
+                    <Input value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} placeholder="GSTIN (optional)" />
+                    <Input value={gstName} onChange={(e) => setGstName(e.target.value)} placeholder="GST Name (optional)" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="A/C Name" />
+                      <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="A/C Number" />
+                    </div>
+                    <Input value={ifscCode} onChange={(e) => setIfscCode(e.target.value)} placeholder="IFSC" />
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setGstNumber(currentCustomer?.gst_number ?? '')
+                        setGstName(currentCustomer?.gst_name ?? '')
+                        setAccountName(currentCustomer?.account_name ?? '')
+                        setAccountNumber(currentCustomer?.account_number ?? '')
+                        setIfscCode(currentCustomer?.ifsc ?? '')
+                      }}>Reset</Button>
+                      <Button size="sm" onClick={async () => {
+                        if (!vehicle || !vehicle.customer_id) return toast.error('No customer selected')
+                        try {
+                          await updateCustomer.mutateAsync({ id: vehicle.customer_id, patch: {
+                            gst_number: gstNumber || null,
+                            gst_name: gstName || null,
+                            account_name: accountName || null,
+                            account_number: accountNumber || null,
+                            ifsc: ifscCode || null,
+                          } })
+                          toast.success('Customer details saved')
+                        } catch (e) {
+                          toast.error(String((e as Error).message))
+                        }
+                      }}>Save to Customer</Button>
+                    </div>
+                  </div>
+                </div>
                 {prefill.jobCardId && <Field label="Linked Job Card" value="Yes — items carried over" />}
 
                 {inspectionItems.length > 0 && (
@@ -287,7 +349,13 @@ export function InvoiceBuilder() {
                         {(partQty[p.id] ?? 0) > 0 && (
                           <div className="mt-1 flex items-center justify-end gap-2 pr-1">
                             <span className="text-xs text-slate-400">Qty</span>
-                            <QuantitySelector value={partQty[p.id]} onChange={(v) => setPartQty((q) => ({ ...q, [p.id]: v }))} />
+                            <QuantitySelector
+                              value={partQty[p.id]}
+                              onChange={(v) => setPartQty((q) => ({ ...q, [p.id]: v }))}
+                              step={p.unit === 'Litre' || p.unit === 'L' ? 0.5 : 1}
+                              min={p.unit === 'Litre' || p.unit === 'L' ? 1 : 0}
+                              max={p.unit === 'Litre' || p.unit === 'L' ? 9 : 9999}
+                            />
                           </div>
                         )}
                       </div>

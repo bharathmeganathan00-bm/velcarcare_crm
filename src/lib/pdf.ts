@@ -16,6 +16,11 @@ export interface InvoicePdfData {
   customerName: string
   customerPhone?: string
   customerAddress?: string
+  customerGstNumber?: string
+  customerGstName?: string
+  customerAccountName?: string
+  customerAccountNumber?: string
+  customerIfsc?: string
   vehicleLabel: string
   regNumber: string
   odometer?: number | null
@@ -171,12 +176,19 @@ export async function buildInvoicePdf(company: CompanySettings, data: InvoicePdf
 
   // ------------------------------------------------------ BILL TO / VEHICLE
   let y = Math.max(cy + 4, bY + 2 * (rowH + 6) + 4, 146)
-  const cardW = (CW - 14) / 2, cardH = 76
-  drawInfoCard(doc, M, y, cardW, cardH, 'BILL TO', 'person', [
+  const cardW = (CW - 14) / 2, cardH = 120
+  const billToRows: [string, string][] = [
     ['Name', data.customerName || '—'],
     ['Phone', data.customerPhone || '—'],
     ['Address', data.customerAddress || '—'],
-  ])
+  ]
+  if (data.customerGstNumber) billToRows.push(['GSTIN', data.customerGstNumber])
+  if (data.customerAccountName || data.customerAccountNumber || data.customerIfsc) {
+    if (data.customerAccountName) billToRows.push(['A/C Name', data.customerAccountName])
+    if (data.customerAccountNumber) billToRows.push(['A/C No.', data.customerAccountNumber])
+    if (data.customerIfsc) billToRows.push(['IFSC', data.customerIfsc])
+  }
+  drawInfoCard(doc, M, y, cardW, cardH, 'BILL TO', 'person', billToRows)
   drawInfoCard(doc, M + cardW + 14, y, cardW, cardH, 'VEHICLE DETAILS', 'car', [
     ['Vehicle', data.vehicleLabel || '—'],
     ['Reg. No.', data.regNumber || '—'],

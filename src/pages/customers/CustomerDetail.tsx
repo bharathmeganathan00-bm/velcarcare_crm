@@ -95,6 +95,15 @@ export function CustomerDetail() {
             </div>
             {customer.email && <p className="mt-3 flex items-center gap-2 text-sm text-slate-500"><Mail className="h-4 w-4" /> {customer.email}</p>}
             {customer.address && <p className="mt-1 flex items-center gap-2 text-sm text-slate-500"><MapPin className="h-4 w-4" /> {customer.address}</p>}
+            {(customer as any).gst_number && <p className="mt-1 text-sm font-semibold text-brand-charcoal">GSTIN: {(customer as any).gst_number}</p>}
+            {((customer as any).account_name || (customer as any).account_number || (customer as any).ifsc) && (
+              <div className="mt-2 text-sm text-slate-600">
+                <p className="font-semibold">Bank Details</p>
+                {(customer as any).account_name && <p className="text-sm">A/C name: {(customer as any).account_name}</p>}
+                {(customer as any).account_number && <p className="text-sm">A/C no: {(customer as any).account_number}</p>}
+                {(customer as any).ifsc && <p className="text-sm">IFSC: {(customer as any).ifsc}</p>}
+              </div>
+            )}
             <div className="mt-4 flex gap-2">
               <CallButton phone={customer.phone} />
               <WhatsAppButton phone={customer.whatsapp ?? customer.phone} label="WhatsApp" className="flex-1" message={`Dear ${customer.name}, greetings from VELCARCARE.`} />
@@ -163,15 +172,33 @@ function EditCustomerDialog({
   onClose: () => void
   onSave: (patch: Record<string, unknown>) => void
 }) {
-  const [f, setF] = useState({
+  type FormState = {
+    name: string
+    phone: string
+    whatsapp: string
+    email: string
+    address: string
+    notes: string
+    gst_number: string
+    gst_name: string
+    account_name: string
+    account_number: string
+    ifsc: string
+  }
+  const [f, setF] = useState<FormState>({
     name: customer.name,
     phone: customer.phone,
     whatsapp: customer.whatsapp ?? '',
     email: customer.email ?? '',
     address: customer.address ?? '',
     notes: customer.notes ?? '',
+    gst_number: (customer as any).gst_number ?? '',
+    gst_name: (customer as any).gst_name ?? '',
+    account_name: (customer as any).account_name ?? '',
+    account_number: (customer as any).account_number ?? '',
+    ifsc: (customer as any).ifsc ?? '',
   })
-  const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }))
+  const set = (k: keyof FormState, v: string) => setF((s) => ({ ...s, [k]: v }))
 
   return (
     <Dialog open onClose={onClose} title="Edit Customer">
@@ -184,6 +211,13 @@ function EditCustomerDialog({
         <Field label="Email"><Input value={f.email} onChange={(e) => set('email', e.target.value)} /></Field>
         <Field label="Address"><Textarea value={f.address} onChange={(e) => set('address', e.target.value)} /></Field>
         <Field label="Notes"><Textarea value={f.notes} onChange={(e) => set('notes', e.target.value)} /></Field>
+        <Field label="GST Number"><Input value={f.gst_number} onChange={(e) => set('gst_number', e.target.value)} placeholder="GSTIN (optional)" /></Field>
+        <Field label="GST Name"><Input value={f.gst_name} onChange={(e) => set('gst_name', e.target.value)} placeholder="Business name (optional)" /></Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Account Name"><Input value={f.account_name} onChange={(e) => set('account_name', e.target.value)} /></Field>
+          <Field label="Account Number"><Input value={f.account_number} onChange={(e) => set('account_number', e.target.value)} /></Field>
+        </div>
+        <Field label="IFSC"><Input value={f.ifsc} onChange={(e) => set('ifsc', e.target.value)} /></Field>
         <div className="flex gap-3 pt-2">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button
