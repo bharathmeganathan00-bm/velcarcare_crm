@@ -1,0 +1,49 @@
+Contacts backfill report — 2026-08-19T05:24:12.979Z
+Source: C:\Project\velcarcare crm software\contacts_extracted.xlsx
+
+Rows with a name (excluding header): 662
+Rows with an unparseable phone number (skipped): 30
+  row 3: "C37 Celerio Doctor" phone="703-405-502"
+  row 76: "IOB current Account" phone="1-697-330-00000017"
+  row 263: "C1 Wagon R" phone=""
+  row 528: "Psk Motor Scrab" phone="096-775-20292"
+  row 622: "Santhosh Jewllary BNI" phone=""
+  row 639: "customer care" phone="121"
+  row 640: "my airtel" phone="121"
+  row 641: "police" phone="100"
+  row 642: "fire" phone="101"
+  row 643: "ambulance" phone="102"
+  row 644: "railway inquiry" phone="139"
+  row 645: "airtel live(AL)" phone="54321"
+  row 646: "AL hello tunes" phone="578-785"
+  row 647: "ALentertainment" phone="56789"
+  row 648: "AL on demand" phone="543-213"
+  row 649: "AL friendzchat" phone="543-216"
+  row 650: "AL cricket" phone="543-212-601"
+  row 651: "AL *dial" phone="321"
+  row 652: "Instant help 24x7" phone="121"
+  row 653: "Internet packs" phone="12111"
+  row 654: "Best Offer" phone="1211"
+  row 655: "Full Talktime" phone="1-213-12"
+  row 656: "Advance Talktime" phone="52141"
+  row 657: "My Offer" phone="12131"
+  row 658: "Entertainment Store" phone="56789"
+  row 659: "airtel money" phone="400"
+  row 660: "SMS Pack" phone="333"
+  row 661: "airtel Store" phone="129"
+  row 662: "Pandit ji LIVE" phone="579-211"
+  row 663: "Cybercrime Helpline" phone="1930"
+
+Distinct C##-code customers matched (high confidence): 406
+C##-code entries with conflicting phone numbers in the source (skipped, needs manual review): 3
+  C52: "C52 Indica" -> 962-627-2341 (row 26) vs "C52 Santro" -> +919884896469 (row 38)
+  C152: "C152 Alto K10" -> +918925704659 (row 68) vs "C 152 Figo" -> 638-333-4978 (row 176)
+  C117: "C117 Astar" -> +918015085844 (row 397) vs "C117 Astar" -> 978-968-5844 (row 585)
+
+Distinct plain-name customers matched (lower confidence): 220
+Plain names with conflicting phone numbers in the source (skipped): 0
+
+IMPORTANT: the counts above are candidate matches found in the source file, not
+guaranteed hits — the actual number of customers updated depends on how many of
+these names/codes exist in the live `customers` table with a placeholder phone
+when the SQL is run (each UPDATE only affects rows matching both conditions).

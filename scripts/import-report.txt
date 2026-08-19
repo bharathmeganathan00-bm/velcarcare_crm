@@ -1,0 +1,20 @@
+Legacy import report — 2026-08-18T07:07:39.711Z
+Source: C:\Project\velcarcare crm software\velcare_two_sheets_combined.xlsx
+
+Rows in sheet (excluding header): 230
+Rows skipped (no name AND no make): 13 -> rows 60, 83, 84, 87, 88, 94, 96, 112, 117, 130, 134, 168, 209
+Customers created: 165 (deduped by phone where a real phone existed)
+Vehicles created: 217 (placeholder reg numbers LEGACY-0001..., one per row)
+Job cards / invoices created: 217
+Invoice line items created: 776
+
+Rows with placeholder name "Unknown Customer (Make)" (no name in sheet, only Make): 39 -> rows 15, 16, 18, 19, 22, 23, 24, 28, 33, 34, 39, 49, 52, 56, 58, 73, 101, 106, 110, 120, 122, 123, 127, 136, 139, 146, 161, 164, 167, 170, 179, 182, 183, 188, 198, 201, 205, 207, 222
+Rows with placeholder phone NA0001... (no phone in sheet): 60 -> rows 4, 5, 6, 7, 13, 15, 19, 21, 25, 26, 27, 29, 31, 35, 36, 40, 42, 43, 44, 45, 46, 48, 52, 53, 57, 74, 79, 82, 110, 120, 126, 136, 137, 147, 149, 150, 152, 155, 159, 164, 165, 166, 167, 171, 173, 184, 185, 189, 191, 192, 193, 194, 195, 197, 201, 202, 206, 223, 228, 231
+Rows where Total > sum of the 4 priced items (difference added as "Other charges (legacy total)"): 72 -> rows 5, 7, 10, 12, 16, 17, 20, 21, 23, 25, 28, 29, 32, 33, 34, 36, 38, 40, 41, 43, 46, 49, 50, 55, 62, 63, 70, 72, 75, 78, 81, 86, 90, 92, 105, 108, 110, 114, 115, 116, 123, 127, 129, 136, 139, 141, 149, 150, 156, 158, 166, 176, 179, 181, 182, 183, 185, 187, 189, 190, 192, 195, 198, 199, 204, 211, 212, 219, 221, 224, 227, 230
+Rows with zero grand total (no price data at all): 16 -> rows 2, 3, 11, 71, 106, 118, 121, 124, 126, 131, 133, 144, 161, 163, 180, 220
+
+Known gaps (source sheet limitation, not a script bug):
+- No vehicle registration numbers in the source -> placeholder LEGACY-#### used, fix per-vehicle later.
+- No visit dates in the usable columns -> every legacy row is stamped with a synthetic, strictly-increasing timestamp starting 2020-01-01 (one second apart, in original sheet row order) purely so the app's "newest first" list ordering puts real/new data on top and this imported data at the bottom.
+- Item classification (service vs spare part vs labour) is not reliable from free text -> defaulted to "service" except literal "Labour" entries.
+- Columns 17-24 (Job Card No/Part No/Qty/Unit Price/Labour) were ignored: only 4/231 rows had data there and 2 of those had no customer attached, so they could not be trusted.
