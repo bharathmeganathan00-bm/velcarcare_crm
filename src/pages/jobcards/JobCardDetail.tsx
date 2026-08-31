@@ -90,7 +90,7 @@ export function JobCardDetail() {
               <span className="text-lg font-extrabold text-brand-red">{formatCurrency(jc.grand_total)}</span>
             </div>
             <div className="space-y-2 pt-2">
-              <Button className="w-full" onClick={() => navigate('/invoices/new')}><FileText className="h-4 w-4" /> Generate Invoice</Button>
+              <Button className="w-full" onClick={() => navigate('/invoices/new', { state: { jobCardId: jc.id, vehicleId: jc.vehicle_id } })}><FileText className="h-4 w-4" /> Generate Invoice</Button>
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
                 <WhatsAppButton phone="9787549179" label="Update" message={`Dear ${jc.customer_name}, your vehicle ${jc.reg_number} status at VELCARCARE: ${s.label}.`} />

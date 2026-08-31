@@ -120,7 +120,7 @@ function mapCustomer(r: any): Customer {
 export async function listVehicles(search = ''): Promise<Vehicle[]> {
   let q = supabase
     .from('vehicles')
-    .select('*, customers(name)')
+    .select('*, customers(name, phone)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
   if (search.trim()) q = q.or(`reg_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%`)
@@ -129,12 +129,12 @@ export async function listVehicles(search = ''): Promise<Vehicle[]> {
 }
 
 export async function listVehiclesForCustomer(customerId: string): Promise<Vehicle[]> {
-  const { data, error } = await supabase.from('vehicles').select('*, customers(name)').eq('customer_id', customerId).is('deleted_at', null)
+  const { data, error } = await supabase.from('vehicles').select('*, customers(name, phone)').eq('customer_id', customerId).is('deleted_at', null)
   return check(data, error)!.map(mapVehicle)
 }
 
 export async function getVehicle(id: string): Promise<Vehicle | null> {
-  const { data, error } = await supabase.from('vehicles').select('*, customers(name)').eq('id', id).maybeSingle()
+  const { data, error } = await supabase.from('vehicles').select('*, customers(name, phone)').eq('id', id).maybeSingle()
   if (error) throw new Error(error.message)
   return data ? mapVehicle(data) : null
 }
@@ -159,7 +159,7 @@ export async function createVehicle(payload: Partial<Vehicle>): Promise<Vehicle>
       puc_expiry: payload.puc_expiry || null,
       notes: payload.notes,
     })
-    .select('*, customers(name)')
+    .select('*, customers(name, phone)')
     .single()
   return mapVehicle(check(data, error))
 }
@@ -169,6 +169,7 @@ function mapVehicle(r: any): Vehicle {
     id: r.id,
     customer_id: r.customer_id,
     customer_name: r.customers?.name,
+    customer_phone: r.customers?.phone,
     reg_number: r.reg_number,
     brand: r.brand,
     model: r.model,
@@ -214,11 +215,34 @@ export async function updateJobCardStatus(id: string, status: string) {
   await supabase.from('job_card_status_history').insert({ job_card_id: id, status })
 }
 
+/**
+ * Client-side sequence number. Derived from the highest existing `<prefix>-NNNNNN`
+ * number rather than a row count — a row-count sequence goes stale (and starts
+ * colliding with the unique constraint on insert) the moment any row is deleted,
+ * or when the table also holds legacy-imported rows with a different numbering
+ * scheme (this project bulk-imported ~500 rows as `INV-OLD-...` / `JC-OLD-...`).
+ */
 export async function nextSequence(prefix: 'JC' | 'INV' | 'EST' | 'PO'): Promise<string> {
-  // Simple client-side sequence: count existing rows. For production, prefer a DB sequence/RPC.
   const table = prefix === 'JC' ? 'job_cards' : prefix === 'INV' ? 'invoices' : prefix === 'EST' ? 'estimates' : 'purchases'
-  const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
-  return `${prefix}-${String((count ?? 0) + 1).padStart(6, '0')}`
+  const col = prefix === 'JC' ? 'jobcard_no' : prefix === 'INV' ? 'invoice_no' : prefix === 'EST' ? 'estimate_no' : 'purchase_no'
+  // Only this app's own `PREFIX-NNNNNN` numbers participate in the sequence —
+  // legacy rows use a distinct `PREFIX-OLD-...` format and are ignored here.
+  const { data } = await supabase
+    .from(table)
+    .select(col)
+    .like(col, `${prefix}-%`)
+    .not(col, 'like', `${prefix}-OLD%`)
+    .order(col, { ascending: false })
+    .limit(1)
+  const last = (data?.[0] as Record<string, string> | undefined)?.[col]
+  const lastNum = last ? parseInt(last.slice(prefix.length + 1), 10) || 0 : 0
+  return `${prefix}-${String(lastNum + 1).padStart(6, '0')}`
+}
+
+/** Postgres unique_violation — thrown when two clients race for the same sequence number. */
+function isUniqueViolation(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e)
+  return /duplicate key value violates unique constraint/i.test(msg)
 }
 
 function mapJobCard(r: any): JobCard {
@@ -580,14 +604,17 @@ export async function createJobCard(input: {
   labour: number
   status?: string
 }) {
-  // If an active job card exists for this vehicle, update it instead so edits continue
-  // using the same job card instead of creating duplicates.
+  // If an active (not yet delivered/cancelled) job card exists for this vehicle,
+  // update it instead of creating a duplicate. Delivered/cancelled job cards are
+  // past, closed visits — including legacy-imported history, which is *always*
+  // 'delivered' — and must never be reused/overwritten by a new invoice.
   const existing = await supabase
     .from('job_cards')
     .select('id, jobcard_no')
     .eq('vehicle_id', input.vehicle.id)
     .eq('customer_id', input.vehicle.customer_id)
     .is('deleted_at', null)
+    .not('status', 'in', '("delivered","cancelled")')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -629,26 +656,33 @@ export async function createJobCard(input: {
     return { id: jcId, jobcard_no: jcNo }
   }
 
-  // No existing active job card — create a fresh one
-  const jobcard_no = await nextSequence('JC')
-  const { data, error } = await supabase
-    .from('job_cards')
-    .insert({
-      jobcard_no,
-      customer_id: input.vehicle.customer_id,
-      vehicle_id: input.vehicle.id,
-      odometer: input.vehicle.odometer ?? null,
-      complaints: input.complaints ?? null,
-      status: input.status ?? 'received',
-      services_total,
-      parts_total,
-      labour_total: input.labour,
-      grand_total,
-    })
-    .select('id, jobcard_no')
-    .single()
-  if (error) throw new Error(error.message)
-  const jobCardId = (data as { id: string }).id
+  // No existing active job card — create a fresh one (retry if another confirm() raced us).
+  let jobCardId = ''
+  let jobcard_no = ''
+  for (let attempt = 0; ; attempt++) {
+    jobcard_no = await nextSequence('JC')
+    const { data, error } = await supabase
+      .from('job_cards')
+      .insert({
+        jobcard_no,
+        customer_id: input.vehicle.customer_id,
+        vehicle_id: input.vehicle.id,
+        odometer: input.vehicle.odometer ?? null,
+        complaints: input.complaints ?? null,
+        status: input.status ?? 'received',
+        services_total,
+        parts_total,
+        labour_total: input.labour,
+        grand_total,
+      })
+      .select('id, jobcard_no')
+      .single()
+    if (!error) {
+      jobCardId = (data as { id: string }).id
+      break
+    }
+    if (attempt >= 2 || !isUniqueViolation(new Error(error.message))) throw new Error(error.message)
+  }
 
   if (input.services.length) {
     const { error: e } = await supabase.from('job_card_services').insert(
@@ -722,7 +756,6 @@ export async function createInvoice(input: {
   method: string
   status?: string
 }) {
-  const invoice_no = await nextSequence('INV')
   const servicesTotal = input.services.reduce((s, x) => s + x.labour_charge, 0)
   const partsTotal = input.parts.reduce((s, x) => s + x.qty * x.price, 0)
   const subtotal = servicesTotal + partsTotal + input.labour - input.discount
@@ -732,29 +765,38 @@ export async function createInvoice(input: {
   const balance = grand_total - input.paid
   const status = input.status ?? (input.paid >= grand_total ? 'paid' : input.paid > 0 ? 'partial' : 'confirmed')
 
-  const { data, error } = await supabase
-    .from('invoices')
-    .insert({
-      invoice_no,
-      customer_id: input.vehicle.customer_id,
-      vehicle_id: input.vehicle.id,
-      job_card_id: input.jobCardId ?? null,
-      is_gst: input.isGst,
-      subtotal,
-      labour_charge: input.labour,
-      discount: input.discount,
-      cgst,
-      sgst,
-      grand_total,
-      paid: input.paid,
-      balance,
-      payment_method: input.method,
-      status,
-    })
-    .select('id, invoice_no')
-    .single()
-  if (error) throw new Error(error.message)
-  const invoiceId = (data as { id: string }).id
+  // Retry with a freshly-computed number if another confirm() raced us for the same one.
+  let invoice_no = ''
+  let invoiceId = ''
+  for (let attempt = 0; ; attempt++) {
+    invoice_no = await nextSequence('INV')
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert({
+        invoice_no,
+        customer_id: input.vehicle.customer_id,
+        vehicle_id: input.vehicle.id,
+        job_card_id: input.jobCardId ?? null,
+        is_gst: input.isGst,
+        subtotal,
+        labour_charge: input.labour,
+        discount: input.discount,
+        cgst,
+        sgst,
+        grand_total,
+        paid: input.paid,
+        balance,
+        payment_method: input.method,
+        status,
+      })
+      .select('id, invoice_no')
+      .single()
+    if (!error) {
+      invoiceId = (data as { id: string }).id
+      break
+    }
+    if (attempt >= 2 || !isUniqueViolation(new Error(error.message))) throw new Error(error.message)
+  }
 
   const items = [
     ...input.services.map((s) => ({ invoice_id: invoiceId, kind: 'service', ref_id: s.id, name: s.name, qty: 1, price: s.labour_charge, amount: s.labour_charge })),

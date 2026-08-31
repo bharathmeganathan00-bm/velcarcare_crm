@@ -61,6 +61,8 @@ export function InvoiceBuilder() {
   const [paidStr, setPaidStr] = useState('0')
   const [method, setMethod] = useState('Cash')
   const [partQuery, setPartQuery] = useState('')
+  const [vehicleQuery, setVehicleQuery] = useState('')
+  const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false)
 
   
 
@@ -127,6 +129,18 @@ export function InvoiceBuilder() {
     return t ? allParts.filter((p) => p.name.toLowerCase().includes(t) || (p.part_number ?? '').toLowerCase().includes(t)) : allParts
   }, [partQuery, allParts])
 
+  const filteredVehicles = useMemo(() => {
+    const t = vehicleQuery.trim().toLowerCase()
+    if (!t) return vehicles
+    return vehicles.filter((v) =>
+      (v.customer_name ?? '').toLowerCase().includes(t) ||
+      (v.customer_phone ?? '').toLowerCase().includes(t) ||
+      (v.reg_number ?? '').toLowerCase().includes(t) ||
+      (v.brand ?? '').toLowerCase().includes(t) ||
+      (v.model ?? '').toLowerCase().includes(t),
+    )
+  }, [vehicleQuery, vehicles])
+
   if (!vLoading && vehicles.length === 0) {
     return (
       <EmptyState
@@ -146,15 +160,15 @@ export function InvoiceBuilder() {
     date: '',
     jobCardNo: prefill.jobCardId ? 'Linked' : undefined,
     customerName: vehicle.customer_name ?? 'Customer',
-    customerPhone: vehicle?.customer_name ? '' : '',
-    customerAddress: vehicle?.customer_name ? '' : undefined,
+    customerPhone: vehicle.customer_phone ?? '',
+    customerAddress: undefined,
     customerGstNumber: gstNumber || undefined,
     customerGstName: gstName || undefined,
     customerAccountName: accountName || undefined,
     customerAccountNumber: accountNumber || undefined,
     customerIfsc: ifscCode || undefined,
-    vehicleLabel: `${vehicle.brand} ${vehicle.model} · ${vehicle.year ?? ''}`,
-    regNumber: vehicle.reg_number,
+    vehicleLabel: `${vehicle.brand ?? ''} ${vehicle.model ?? ''} · ${vehicle.year ?? ''}`,
+    regNumber: vehicle.reg_number ?? '',
     odometer: vehicle.odometer,
     fuelType: vehicle.fuel_type ?? undefined,
     services: servicesLines,
@@ -261,11 +275,34 @@ export function InvoiceBuilder() {
             <Card>
               <CardHeader><CardTitle>Customer & Vehicle</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <select className="input-base disabled:opacity-70" value={vehicle.id} disabled={isEdit} onChange={(e) => setVehicleId(e.target.value)}>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.reg_number} · {v.customer_name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Input
+                    icon={<Search className="h-4 w-4" />}
+                    disabled={isEdit}
+                    value={vehiclePickerOpen ? vehicleQuery : `${vehicle.customer_name ?? ''}${vehicle.customer_phone ? ` · ${vehicle.customer_phone}` : ''} · ${vehicle.brand ?? ''} ${vehicle.model ?? ''} · ${vehicle.reg_number ?? ''}`}
+                    placeholder="Search by customer name or mobile number…"
+                    onFocus={() => { setVehiclePickerOpen(true); setVehicleQuery('') }}
+                    onChange={(e) => setVehicleQuery(e.target.value)}
+                    onBlur={() => setTimeout(() => setVehiclePickerOpen(false), 150)}
+                  />
+                  {vehiclePickerOpen && (
+                    <div className="absolute z-10 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-surface-border bg-white shadow-lg">
+                      {filteredVehicles.length === 0 && <p className="px-3.5 py-3 text-sm text-slate-400">No customer or vehicle matches.</p>}
+                      {filteredVehicles.map((v) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { setVehicleId(v.id); setVehicleQuery(''); setVehiclePickerOpen(false) }}
+                          className={cn('flex w-full flex-col items-start gap-0.5 border-b border-surface-border px-3.5 py-2.5 text-left last:border-b-0 hover:bg-surface-muted', v.id === vehicle.id && 'bg-surface-muted')}
+                        >
+                          <span className="text-sm font-semibold text-brand-charcoal">{v.customer_name}{v.customer_phone ? ` · ${v.customer_phone}` : ''}</span>
+                          <span className="text-xs text-slate-500">{v.brand ?? ''} {v.model ?? ''} · {v.reg_number ?? ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Field label="Customer" value={invoiceData.customerName} />
                 <Field label="Vehicle" value={invoiceData.vehicleLabel} />
                 <Field label="Registration" value={invoiceData.regNumber} />

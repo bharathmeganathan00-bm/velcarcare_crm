@@ -20,6 +20,7 @@ export function Settings() {
   const [tab, setTab] = useState('company')
   const [draft, setDraft] = useState<CompanySettings>(settings)
   const [saving, setSaving] = useState(false)
+  const [gstToggling, setGstToggling] = useState(false)
 
   // Keep the draft in sync once the live settings row loads.
   useEffect(() => { setDraft(settings) }, [settings])
@@ -85,8 +86,22 @@ export function Settings() {
                     <p className="text-sm text-slate-500">Show CGST/SGST and GST number on invoices.</p>
                   </div>
                   <button
-                    onClick={() => set('gst_enabled', !draft.gst_enabled)}
-                    className={`relative h-7 w-12 rounded-full transition ${draft.gst_enabled ? 'bg-status-success' : 'bg-slate-300'}`}
+                    disabled={gstToggling}
+                    onClick={async () => {
+                      const next = { ...draft, gst_enabled: !draft.gst_enabled }
+                      setDraft(next)
+                      setGstToggling(true)
+                      try {
+                        await persist(next)
+                        toast.success(next.gst_enabled ? 'GST enabled' : 'GST disabled')
+                      } catch (e) {
+                        setDraft(draft)
+                        toast.error(String((e as Error).message))
+                      } finally {
+                        setGstToggling(false)
+                      }
+                    }}
+                    className={`relative h-7 w-12 rounded-full transition disabled:opacity-60 ${draft.gst_enabled ? 'bg-status-success' : 'bg-slate-300'}`}
                   >
                     <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${draft.gst_enabled ? 'left-6' : 'left-1'}`} />
                   </button>

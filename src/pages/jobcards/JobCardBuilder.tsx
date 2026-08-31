@@ -34,8 +34,22 @@ export function JobCardBuilder() {
   const [partQty, setPartQty] = useState<Record<string, number>>({})
   const [labour, setLabour] = useState(0)
   const [complaints, setComplaints] = useState('')
+  const [vehicleQuery, setVehicleQuery] = useState('')
+  const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false)
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0]
+
+  const filteredVehicles = useMemo(() => {
+    const t = vehicleQuery.trim().toLowerCase()
+    if (!t) return vehicles
+    return vehicles.filter((v) =>
+      (v.customer_name ?? '').toLowerCase().includes(t) ||
+      (v.customer_phone ?? '').toLowerCase().includes(t) ||
+      (v.reg_number ?? '').toLowerCase().includes(t) ||
+      (v.brand ?? '').toLowerCase().includes(t) ||
+      (v.model ?? '').toLowerCase().includes(t),
+    )
+  }, [vehicleQuery, vehicles])
 
   const parts = useMemo(() => {
     const q = partQuery.trim().toLowerCase()
@@ -128,7 +142,7 @@ export function JobCardBuilder() {
     <div>
       <div className="mb-5 flex items-center gap-3">
         <Button variant="ghost" size="iconSm" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
-        <SectionTitle title="New Job Card" subtitle={`${vehicle.brand} ${vehicle.model} · ${vehicle.reg_number}`} />
+        <SectionTitle title="New Job Card" subtitle={`${vehicle.brand ?? ''} ${vehicle.model ?? ''} · ${vehicle.reg_number ?? ''}`} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -136,11 +150,33 @@ export function JobCardBuilder() {
           <Card className="mb-4">
             <CardHeader><CardTitle>Vehicle & Complaints</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <select className="input-base" value={vehicle.id} onChange={(e) => setVehicleId(e.target.value)}>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.reg_number} · {v.customer_name}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Input
+                  icon={<Search className="h-4 w-4" />}
+                  value={vehiclePickerOpen ? vehicleQuery : `${vehicle.customer_name ?? ''}${vehicle.customer_phone ? ` · ${vehicle.customer_phone}` : ''} · ${vehicle.brand ?? ''} ${vehicle.model ?? ''} · ${vehicle.reg_number ?? ''}`}
+                  placeholder="Search by customer name or mobile number…"
+                  onFocus={() => { setVehiclePickerOpen(true); setVehicleQuery('') }}
+                  onChange={(e) => setVehicleQuery(e.target.value)}
+                  onBlur={() => setTimeout(() => setVehiclePickerOpen(false), 150)}
+                />
+                {vehiclePickerOpen && (
+                  <div className="absolute z-10 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-surface-border bg-white shadow-lg">
+                    {filteredVehicles.length === 0 && <p className="px-3.5 py-3 text-sm text-slate-400">No customer or vehicle matches.</p>}
+                    {filteredVehicles.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setVehicleId(v.id); setVehicleQuery(''); setVehiclePickerOpen(false) }}
+                        className={cn('flex w-full flex-col items-start gap-0.5 border-b border-surface-border px-3.5 py-2.5 text-left last:border-b-0 hover:bg-surface-muted', v.id === vehicle.id && 'bg-surface-muted')}
+                      >
+                        <span className="text-sm font-semibold text-brand-charcoal">{v.customer_name}{v.customer_phone ? ` · ${v.customer_phone}` : ''}</span>
+                        <span className="text-xs text-slate-500">{v.brand ?? ''} {v.model ?? ''} · {v.reg_number ?? ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Textarea value={complaints} onChange={(e) => setComplaints(e.target.value)} placeholder="e.g. AC not cooling, noise from front left wheel…" />
             </CardContent>
           </Card>

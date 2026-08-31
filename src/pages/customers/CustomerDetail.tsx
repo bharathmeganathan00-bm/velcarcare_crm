@@ -139,7 +139,19 @@ export function CustomerDetail() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Job Cards</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Job Cards</CardTitle>
+            <Button
+              size="sm"
+              variant="subtle"
+              onClick={() => {
+                if (vehicles.length === 0) return toast.error('Add a vehicle for this customer first')
+                navigate('/job-cards/new', { state: { vehicleId: vehicles[0].id } })
+              }}
+            >
+              <Plus className="h-4 w-4" /> Add Job Card
+            </Button>
+          </CardHeader>
           <CardContent className="space-y-2 pt-0">
             {jobcards.map((j) => {
               const s = JOBCARD_STATUS[j.status]

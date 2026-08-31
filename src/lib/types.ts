@@ -68,6 +68,7 @@ export interface Vehicle {
   id: string
   customer_id: string
   customer_name?: string
+  customer_phone?: string
   reg_number: string
   brand: string
   model: string
