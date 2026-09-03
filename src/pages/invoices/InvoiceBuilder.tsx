@@ -8,14 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ServiceCard, SparePartCard } from '@/components/catalogue/CatalogueCards'
-import { QuantitySelector, WhatsAppButton } from '@/components/common/ActionButtons'
+import { QuantitySelector } from '@/components/common/ActionButtons'
+import { useAuth } from '@/context/AuthContext'
 import { useSettings } from '@/context/SettingsContext'
 import { useCustomer, useUpdateCustomer } from '@/hooks/data'
 import { useCreateInvoice, useUpdateInvoice, useInvoice, useInvoiceItems, useServices, useSpareParts, useVehicles } from '@/hooks/data'
-import { createJobCard, saveInspection } from '@/lib/api'
-import { downloadInvoicePdf, type InvoiceLine } from '@/lib/pdf'
+import { createJobCard, saveInspection, logInvoiceShare } from '@/lib/api'
+import { downloadInvoicePdf, invoicePdfBlob, type InvoiceLine } from '@/lib/pdf'
+import { shareInvoiceViaWebShare, type ShareMethod, type ShareStatus } from '@/lib/whatsappShare'
 import { inspectionToArray, type InspectionMap } from '@/lib/inspection'
-import { formatCurrency, cn } from '@/lib/utils'
+import { formatCurrency, toWhatsAppNumber, cn } from '@/lib/utils'
 
 const STEPS = ['Customer & Vehicle', 'Services & Parts', 'Payment & Review']
 
@@ -35,6 +37,7 @@ export function InvoiceBuilder() {
   const isEdit = !!editId
   const prefill = (location.state as PrefillState | null) ?? {}
   const { settings } = useSettings()
+  const { user, isManager } = useAuth()
   const { data: vehicles = [], isLoading: vLoading } = useVehicles()
   const { data: allServices = [] } = useServices()
   const { data: allParts = [] } = useSpareParts()
@@ -251,9 +254,52 @@ export function InvoiceBuilder() {
         invoiceDate: invoiceDateStr,
       })
       toast.success(`Invoice ${res.invoice_no} confirmed`)
+      await sharePdfToCustomer(res.id, res.invoice_no)
       navigate(`/invoices/${res.id}`)
     } catch (e) {
       toast.error(String((e as Error).message))
+    }
+  }
+
+  /**
+   * Best-effort: build the real invoice PDF and hand it straight to the
+   * customer's WhatsApp — native share sheet with the PDF attached where the
+   * browser supports it, else download-then-open-chat. Never blocks/fails the
+   * invoice itself; failures are surfaced as a toast only.
+   */
+  async function sharePdfToCustomer(invoiceId: string, invoiceNo: string) {
+    const phone = invoiceData.customerPhone
+    if (!phone) {
+      toast.message('Invoice saved — no WhatsApp number on file for this customer, so the PDF was not sent.')
+      return
+    }
+    try {
+      const blob = await invoicePdfBlob(settings, { ...invoiceData, invoiceNo })
+      const file = new File([blob], `${invoiceNo}.pdf`, { type: 'application/pdf' })
+      const message = `Dear ${invoiceData.customerName},\nYour vehicle service invoice from VELCARCARE is ready.\n\nVehicle: ${invoiceData.regNumber}\nInvoice: ${invoiceNo}\n${labourLine}Total: ${formatCurrency(grand)}\nPaid: ${formatCurrency(paid)}\nBalance: ${formatCurrency(balance)}\n\nThank you for choosing VELCARCARE.`
+      const log = user
+        ? (method: ShareMethod, status: ShareStatus, error?: string) =>
+            logInvoiceShare({
+              invoice_id: invoiceId,
+              customer_id: vehicle.customer_id ?? null,
+              shared_by: user.id,
+              shared_by_name: isManager ? 'Manager' : user.name ?? 'Staff',
+              shared_by_role: isManager ? 'manager' : 'staff',
+              phone_number: toWhatsAppNumber(phone),
+              share_method: method,
+              status,
+              error_message: error ?? null,
+            })
+        : () => {}
+      const result = await shareInvoiceViaWebShare({ file, message, title: `Invoice ${invoiceNo}`, phone, log })
+      if (result.cancelled) return
+      toast[result.fallback ? 'message' : 'success'](
+        result.fallback
+          ? 'Invoice PDF downloaded — attach it in the WhatsApp chat that just opened and tap Send.'
+          : 'Invoice PDF shared on WhatsApp',
+      )
+    } catch (e) {
+      toast.error(`Invoice saved, but sending the PDF failed: ${String((e as Error).message)}`)
     }
   }
 
@@ -263,7 +309,6 @@ export function InvoiceBuilder() {
   }
 
   const labourLine = labour > 0 ? `Labour: ${formatCurrency(labour)}\n` : ''
-  const waMessage = `Dear ${invoiceData.customerName},\nYour vehicle service invoice from VELCARCARE is ready.\n\nVehicle: ${invoiceData.regNumber}\n${labourLine}Total: ${formatCurrency(grand)}\nPaid: ${formatCurrency(paid)}\nBalance: ${formatCurrency(balance)}\n\nThank you for choosing VELCARCARE.`
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -472,8 +517,11 @@ export function InvoiceBuilder() {
                     <Button variant="outline" onClick={download}><Download className="h-4 w-4" /> PDF</Button>
                     <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
                   </div>
-                  <WhatsAppButton phone={invoiceData.customerPhone || '9787549179'} message={waMessage} label="Send on WhatsApp" className="w-full" />
-                  <p className="text-center text-[11px] text-slate-400">Confirm to save & deduct stock. Download the PDF, then attach it in WhatsApp.</p>
+                  <p className="text-center text-[11px] text-slate-400">
+                    {isEdit
+                      ? 'Update to save & reconcile stock.'
+                      : "Confirm to save, deduct stock, and send the PDF straight to the customer's WhatsApp number."}
+                  </p>
                 </div>
               )}
             </CardContent>

@@ -48,7 +48,7 @@ export function ShareInvoiceSheet({
             className="w-full bg-[#25D366] text-white hover:brightness-95"
             loading={!!busy}
             disabled={!!busy || !phone}
-            onClick={() => run('fallback')}
+            onClick={() => run('web')}
           >
             <Share2 className="h-4 w-4" /> Share PDF &amp; Open WhatsApp
           </Button>
