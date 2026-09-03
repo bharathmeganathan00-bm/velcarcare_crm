@@ -63,6 +63,8 @@ export function InvoiceBuilder() {
   const [partQuery, setPartQuery] = useState('')
   const [vehicleQuery, setVehicleQuery] = useState('')
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false)
+  // Invoice date — editable at creation, and again later on edit. Defaults to today.
+  const [invoiceDateStr, setInvoiceDateStr] = useState(() => new Date().toISOString().slice(0, 10))
 
   
 
@@ -82,6 +84,7 @@ export function InvoiceBuilder() {
     setDiscountStr(String(editInvoice.discount ?? 0))
     setPaidStr(String(editInvoice.paid ?? 0))
     setMethod(editInvoice.payment_method ?? 'Cash')
+    if (editInvoice.date) setInvoiceDateStr(editInvoice.date)
     setPrefilled(true)
   }, [isEdit, prefilled, invLoaded, itemsLoaded, editInvoice, editItems])
 
@@ -157,7 +160,7 @@ export function InvoiceBuilder() {
 
   const invoiceData = {
     invoiceNo: 'Draft',
-    date: '',
+    date: invoiceDateStr,
     jobCardNo: prefill.jobCardId ? 'Linked' : undefined,
     customerName: vehicle.customer_name ?? 'Customer',
     customerPhone: vehicle.customer_phone ?? '',
@@ -214,6 +217,7 @@ export function InvoiceBuilder() {
             sgstPercent: settings.sgst_percent,
             paid,
             method,
+            invoiceDate: invoiceDateStr,
           },
         })
         toast.success('Invoice updated · stock adjusted')
@@ -244,6 +248,7 @@ export function InvoiceBuilder() {
         sgstPercent: settings.sgst_percent,
         paid,
         method,
+        invoiceDate: invoiceDateStr,
       })
       toast.success(`Invoice ${res.invoice_no} confirmed`)
       navigate(`/invoices/${res.id}`)
@@ -253,7 +258,7 @@ export function InvoiceBuilder() {
   }
 
   async function download() {
-    await downloadInvoicePdf(settings, { ...invoiceData, invoiceNo: 'PREVIEW', date: new Date().toISOString().slice(0, 10) })
+    await downloadInvoicePdf(settings, { ...invoiceData, invoiceNo: 'PREVIEW' })
     toast.success('Preview PDF downloaded')
   }
 
@@ -302,6 +307,15 @@ export function InvoiceBuilder() {
                       ))}
                     </div>
                   )}
+                </div>
+                <div>
+                  <p className="mb-1.5 text-sm font-semibold text-slate-700">Invoice Date</p>
+                  <input
+                    type="date"
+                    value={invoiceDateStr}
+                    onChange={(e) => setInvoiceDateStr(e.target.value || new Date().toISOString().slice(0, 10))}
+                    className="input-base"
+                  />
                 </div>
                 <Field label="Customer" value={invoiceData.customerName} />
                 <Field label="Vehicle" value={invoiceData.vehicleLabel} />

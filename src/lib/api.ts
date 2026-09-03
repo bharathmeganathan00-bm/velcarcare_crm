@@ -381,7 +381,9 @@ function mapInvoice(r: any): Invoice {
     payment_method: r.payment_method ?? null,
     vehicle_label: v ? `${v.brand ?? ''} ${v.model ?? ''}${v.year ? ` · ${v.year}` : ''}`.trim() : '',
     reg_number: v?.reg_number ?? '',
-    date: (r.created_at ?? '').slice(0, 10),
+    // invoice_date is user-editable; falls back to created_at for rows saved
+    // before the 0011 migration added the column.
+    date: (r.invoice_date ?? r.created_at ?? '').slice(0, 10),
     subtotal: Number(r.subtotal ?? 0),
     labour_charge: Number(r.labour_charge ?? 0),
     discount: Number(r.discount ?? 0),
@@ -755,6 +757,8 @@ export async function createInvoice(input: {
   paid: number
   method: string
   status?: string
+  /** Invoice date shown/printed on the bill (YYYY-MM-DD). Defaults to today. */
+  invoiceDate?: string
 }) {
   const servicesTotal = input.services.reduce((s, x) => s + x.labour_charge, 0)
   const partsTotal = input.parts.reduce((s, x) => s + x.qty * x.price, 0)
@@ -764,6 +768,7 @@ export async function createInvoice(input: {
   const grand_total = subtotal + cgst + sgst
   const balance = grand_total - input.paid
   const status = input.status ?? (input.paid >= grand_total ? 'paid' : input.paid > 0 ? 'partial' : 'confirmed')
+  const invoice_date = input.invoiceDate || new Date().toISOString().slice(0, 10)
 
   // Retry with a freshly-computed number if another confirm() raced us for the same one.
   let invoice_no = ''
@@ -778,6 +783,7 @@ export async function createInvoice(input: {
         vehicle_id: input.vehicle.id,
         job_card_id: input.jobCardId ?? null,
         is_gst: input.isGst,
+        invoice_date,
         subtotal,
         labour_charge: input.labour,
         discount: input.discount,
@@ -842,6 +848,8 @@ export async function updateInvoice(
     sgstPercent: number
     paid: number
     method: string
+    /** Invoice date shown/printed on the bill (YYYY-MM-DD). Omit to leave unchanged. */
+    invoiceDate?: string
   },
 ) {
   // 1) Existing part quantities (to reconcile stock).
@@ -865,6 +873,7 @@ export async function updateInvoice(
     .from('invoices')
     .update({
       is_gst: input.isGst,
+      ...(input.invoiceDate ? { invoice_date: input.invoiceDate } : {}),
       subtotal,
       labour_charge: input.labour,
       discount: input.discount,
